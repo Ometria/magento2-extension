@@ -1,5 +1,8 @@
 <?php
 namespace Ometria\Api\Controller\V1;
+
+use Ometria\Api\Helper\Format\V1\Orders as Helper;
+
 class Orders extends \Magento\Framework\App\Action\Action
 {
     protected $resultJsonFactory;
@@ -15,6 +18,8 @@ class Orders extends \Magento\Framework\App\Action\Action
     public function execute()
     {
 		$result = $this->resultJsonFactory->create();
-		return $result->setData(['success' => true]);
+		$data   = Helper::getBlankArray();
+		return $result->setData([$data]);
+		// return $result->setData(['success' => true]);
     }    
 }
