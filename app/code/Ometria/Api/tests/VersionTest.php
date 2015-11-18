@@ -1,7 +1,7 @@
 <?php
 require_once 'app/autoload.php';
 
-use Ometria\Api\Helper\Format\V1\Orders as Helper;
+use Ometria\Api\Helper\Format\V1\Version as Helper;
 class VersionTest extends \PHPUnit_Framework_TestCase
 {
     protected $baseUrl;
@@ -13,11 +13,11 @@ class VersionTest extends \PHPUnit_Framework_TestCase
     public function testOrders()
     {
         $blank_results = Helper::getBlankArray();
-        $result = $this->getUrl('/ometria_api/v1/ENDPOINT');        
+        $result = $this->getUrl('/ometria_api/v1/version');        
         $result = json_decode($result);        
         
         $keys1 = array_keys($blank_results);
-        $keys2 = array_keys((array) $result[0]);
+        $keys2 = array_keys((array) $result);
         
         $this->assertTrue(is_object($result) || is_array($result));
         $this->assertEquals($keys1, $keys2);
