@@ -17,42 +17,26 @@ class Attributes extends \Magento\Framework\App\Action\Action
 		$this->attributes = $attributes;
 	}
 		
-    protected function serializeAttribute($attribute)
+
+    protected function extractAttributeCodeFromUrl()
     {
-        $item = Helper::getBlankArray();
-        $item['id'] = $attribute->getId();
-        $item['title'] = $attribute->getFrontendLabel();
-        $item['attribute_code'] = $attribute->getAttributeCode();
-        switch($attribute->getData('frontend_input'))
+        $params = $this->getRequest()->getParams();
+        $params = array_keys($params);
+        if(count($params) > 1)
         {
-            case 'multiselect':
-                $item['attribute_type'] = 'OPTION_LIST';
-                break;
-            case 'select':
-                $item['attribute_type'] = 'OPTION';
-                break; 
-            case 'boolean';               
-                $item['attribute_type'] = 'OPTION';
-                break;             
-            default:
-                $item['attribute_type'] = 'FREETEXT';
+            throw new \Exception("Invalid Request");
         }
-
-        
-        return $item;   
-    }		
-    
+        $value = array_shift($params);
+        return $value;
+    }
     public function execute()
-    {        
-        $data = [];
-        // $tmp  = [];
-        foreach($this->attributes as $attribute)
-        {
-            // $tmp[$attribute->getFrontendInput()] = 0;
-            $data[] = $this->serializeAttribute($attribute);
-        }
-
-		$result = $this->resultJsonFactory->create();		
-		return $result->setData($data);
+    {    
+        $attribute_code = $this->extractAttributeCodeFromUrl();
+        $attribute = $this->attributes->addFieldToFilter('attribute_code', $attribute_code)
+        ->getFirstItem();
+        var_dump(get_class($attribute));
+        exit;
+		$result = $this->resultJsonFactory->create();
+		return $result->setData(['success' => true]);        
     }    
 }

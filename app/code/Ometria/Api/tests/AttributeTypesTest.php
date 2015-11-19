@@ -1,7 +1,7 @@
 <?php
 require_once 'app/autoload.php';
 
-use Ometria\Api\Helper\Format\V1\Orders as Helper;
+use Ometria\Api\Helper\Format\V1\Attribute\Types as Helper;
 class AttributeTypesTest extends \PHPUnit_Framework_TestCase
 {
     protected $baseUrl;
@@ -13,7 +13,7 @@ class AttributeTypesTest extends \PHPUnit_Framework_TestCase
     public function testOrders()
     {
         $blank_results = Helper::getBlankArray();
-        $result = $this->getUrl('/ometria_api/v1/ENDPOINT');        
+        $result = $this->getUrl('/ometria_api/v1/attribute_types');        
         $result = json_decode($result);        
         
         $keys1 = array_keys($blank_results);
