@@ -17,7 +17,7 @@ class AttributesTest extends \PHPUnit_Framework_TestCase
         $result = json_decode($result);        
         
         $keys1 = array_keys($blank_results);
-        $keys2 = array_keys((array) $result[0]);
+        $keys2 = array_keys((array) $result);
         
         $this->assertTrue(is_object($result) || is_array($result));
         $this->assertEquals($keys1, $keys2);

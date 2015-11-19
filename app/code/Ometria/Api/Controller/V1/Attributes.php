@@ -29,14 +29,33 @@ class Attributes extends \Magento\Framework\App\Action\Action
         $value = array_shift($params);
         return $value;
     }
+    
+    protected function serializeAttribute($attribute)
+    {
+        $options        = $attribute->getOptions();
+        $options        = array_map(function($item){
+            return $item->getData();
+        }, $options);
+
+        
+        $data            = Helper::getBlankArray();
+        $data['type']    = $attribute->getAttributeCode();
+        $data['id']      = $attribute->getId();
+        $data['title']   = $attribute->getFrontend()->getLabel();
+        $data['options'] = $options;
+        
+		return $data;    
+    }
+    
     public function execute()
     {    
-        $attribute_code = $this->extractAttributeCodeFromUrl();
-        $attribute = $this->attributes->addFieldToFilter('attribute_code', $attribute_code)
+        $attribute_code  = $this->extractAttributeCodeFromUrl();
+        $attribute       = $this->attributes->addFieldToFilter('attribute_code', $attribute_code)
         ->getFirstItem();
-        var_dump(get_class($attribute));
-        exit;
-		$result = $this->resultJsonFactory->create();
-		return $result->setData(['success' => true]);        
+        
+        $data            = $this->serializeAttribute($attribute);
+        
+        $result = $this->resultJsonFactory->create();
+		return $result->setData($data);        
     }    
 }
