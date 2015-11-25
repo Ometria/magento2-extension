@@ -1,20 +1,18 @@
 <?php
-namespace Ometria\Api\Helper\Service\Filterable;
-use ArrayObject;
-class Service
-{
-    protected $searchCriteria;
-    protected $dataObjectProcessor;
+namespace Ometria\Api\Helper\Service\Filterable\Service;
 
+class Product extends \Ometria\Api\Helper\Service\Filterable\Service
+{
+    protected $urlModel;
     public function __construct(
 		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
 		\Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,
-		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor    
+		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor ,
+		\Magento\Catalog\Model\Product\Url $urlModel   
     )
     {
-		$this->searchCriteria         = $searchCriteria;
-		$this->helperOmetriaApiFilter = $helperOmetriaApiFilter;
-		$this->dataObjectProcessor    = $dataObjectProcessor;    
+        $this->urlModel = $urlModel;
+        return parent::__construct($searchCriteria, $helperOmetriaApiFilter, $dataObjectProcessor);
     }
     
     public function createResponse($repository, $serialize_as)
@@ -40,8 +38,9 @@ class Service
                 $new = $item->getData();
             }
             
-            var_dump($new);
-            exit;
+            $new['url'] = $item->getProductUrl();
+            $new['category_ids'] = $item->getCategoryIds();
+            
             $items[] = $new;
         }
         

@@ -58,7 +58,20 @@ class Service
             $group_created = $this->createSingleFilterFilterGroup('created_at', $created_since, 'gt');
             $groups[]      = $group_created;        
         }
-                      
+                 
+        //product_type
+        $product_type = $this->request->getParam('product_type');
+        if($product_type === 'parent')
+        {
+            $group_configurable = $this->createSingleFilterFilterGroup('type_id', 'configurable', 'eq');        
+            $groups[]      = $group_configurable;  
+        }
+        if($product_type === 'variant')
+        {
+            $group_simple = $this->createSingleFilterFilterGroup('type_id', 'simple', 'eq');        
+            $groups[]      = $group_simple;          
+        }
+                                      
         $page_size = (int) $this->request->getParam('page_size');
         $page_size = $page_size ? $page_size : 100;                
         
