@@ -1,7 +1,7 @@
 <?php
 require_once 'app/autoload.php';
 
-use Ometria\Api\Helper\Format\V1\Orders as Helper;
+use Ometria\Api\Helper\Format\V1\Stores as Helper;
 class StoresTest extends \PHPUnit_Framework_TestCase
 {
     protected $baseUrl;
@@ -13,7 +13,7 @@ class StoresTest extends \PHPUnit_Framework_TestCase
     public function testOrders()
     {
         $blank_results = Helper::getBlankArray();
-        $result = $this->getUrl('/ometria_api/v1/ENDPOINT');        
+        $result = $this->getUrl('/ometria_api/v1/stores');        
         $result = json_decode($result);        
         
         $keys1 = array_keys($blank_results);
