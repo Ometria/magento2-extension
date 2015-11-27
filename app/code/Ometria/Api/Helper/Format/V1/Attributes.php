@@ -7,9 +7,8 @@ class Attributes
         return [
             "@type"   => "attribute",
             "type"    => "code",
-            "id"      =>null,
-            "title"   =>null,
-            "options" =>null
+            "label"=>"",
+            "value"=>"",                
         ];
     }
 }

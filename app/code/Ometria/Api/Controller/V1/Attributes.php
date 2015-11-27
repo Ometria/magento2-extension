@@ -37,12 +37,25 @@ class Attributes extends \Magento\Framework\App\Action\Action
             return $item->getData();
         }, $options);
 
+        $options        = array_filter($options, function($item){
+            return $item['value'];
+        });
         
-        $data            = Helper::getBlankArray();
-        $data['type']    = $attribute->getAttributeCode();
-        $data['id']      = $attribute->getId();
-        $data['title']   = $attribute->getFrontend()->getLabel();
-        $data['options'] = $options;
+        $type   = $attribute->getAttributeCode();
+        foreach($options as $key=>$option)
+        {
+            $option['@type'] = 'attribute';
+            $option['type']  = $type;
+            $options[$key]    = $option;
+        }
+        
+        sort($options);
+        return $options;
+//         $data            = Helper::getBlankArray();
+//         $data['type']    = $attribute->getAttributeCode();
+//         $data['id']      = $attribute->getId();
+//         $data['title']   = $attribute->getFrontend()->getLabel();
+//         $data['options'] = $options;
         
 		return $data;    
     }
