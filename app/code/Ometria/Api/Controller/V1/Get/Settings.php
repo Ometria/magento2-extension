@@ -1,25 +1,25 @@
 <?php
 namespace Ometria\Api\Controller\V1\Get;
+use Ometria\Api\Helper\Config;
 class Settings extends \Magento\Framework\App\Action\Action
 {
-    protected $resultJsonFactory;
-    protected $scopeConfig;
-    
-    const CONFIG_TOP = 'ometria';
+    protected $resultJsonFactory;    
+    protected $helperConfig;
+   
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
-		\Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+		Config $helperConfig
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory = $resultJsonFactory;
-		$this->scopeConfig = $scopeConfig;
+		$this->helperConfig = $helperConfig;
 	}
 	
     public function execute()
     {
-        $values = $this->scopeConfig->getValue(self::CONFIG_TOP);    
-        $data   = [self::CONFIG_TOP=>$values];
+        $values = $this->helperConfig->get();    
+        $data   = [Config::CONFIG_TOP=>$values];
 		$result = $this->resultJsonFactory->create();		
 		return $result->setData($data);
     }    

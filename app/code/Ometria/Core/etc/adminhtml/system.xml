@@ -19,6 +19,10 @@
 					<label>Ometria Site Identifier</label>
 					<comment>Sign up for an account at &lt;a href="http://www.ometria.com/" target="_blank"&gt;Ometria.com&lt;/a&gt;</comment>
 				</field>
+				<field id="privatekey" translate="label" type="text" sortOrder="1050" showInDefault="1" showInWebsite="1" showInStore="1">
+					<label>Ometria API Private Key</label>
+					<comment>Log into your Ometria Account to find this key</comment>
+				</field>				
 <!-- 
 				<field id="start_wizard" translate="label" type="" sortOrder="1050" showInDefault="1" showInWebsite="0" showInStore="0">
 					<label />

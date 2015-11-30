@@ -1,5 +1,9 @@
 <?php
-class EndpointTest extends \PHPUnit_Framework_TestCase
+require_once 'app/autoload.php';
+require_once 'BaseTest.php';
+use Ometria\Api\Model\Hash;
+
+class EndpointTest extends BaseTest
 {
     protected $baseUrl;
     protected function setup()
@@ -72,6 +76,24 @@ class EndpointTest extends \PHPUnit_Framework_TestCase
     
     protected function getUrl($url)
     {
+        $domain      = $this->getDomainFromUrl($this->baseUrl);
+        $method_name = $this->getMethodNameFromUrl($url);
+        $public_key  = 'abc123';
+        $private_key = '123abc';
+        
+        $request     = [
+            'request_timestamp'=>time(),
+        ];        
+
+        // var_dump($domain, $method_name, $public_key, $private_key, $request);
+        
+        $signature   = Hash::signRequest($domain, $method_name, $public_key, $private_key, $request);
+        $request['signature'] = $signature;
+        
+        $url .= '?' . http_build_query($request);
+
+        // echo "\n" . $url . "\n";
+        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL,$url);
         curl_setopt($ch, CURLOPT_HEADER,1);                
