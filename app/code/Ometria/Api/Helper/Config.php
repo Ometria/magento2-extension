@@ -14,6 +14,10 @@ class Config
     public function get($path=null)
     {
         $config = $this->scopeConfig->getValue($this->getTopLevelName());
+        if($config === null)
+        {
+            return null;
+        }
         if(!$path)
         {
             return $config;
