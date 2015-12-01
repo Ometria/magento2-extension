@@ -9,6 +9,7 @@ class Products extends \Magento\Framework\App\Action\Action
     protected $urlModel;
     protected $attributes;
     protected $helperCategory;
+    protected $response;
     
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
@@ -16,7 +17,8 @@ class Products extends \Magento\Framework\App\Action\Action
 		\Ometria\Api\Helper\Service\Filterable\Service\Product $apiHelperServiceFilterable,
 		\Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
 		\Magento\Catalog\Model\Resource\Product\Attribute\Collection $attributes,
-		\Ometria\Api\Helper\Category $helperCategory
+		\Ometria\Api\Helper\Category $helperCategory,
+		\Magento\Framework\App\ResponseInterface $response
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory          = $resultJsonFactory;
@@ -24,6 +26,7 @@ class Products extends \Magento\Framework\App\Action\Action
 		$this->productRepository          = $productRepository;
 		$this->attributes                 = $attributes;
 		$this->helperCategory             = $helperCategory;
+		$this->response                   = $response;
 	}
 	
 	protected function getArrayKey($array, $key)
@@ -88,7 +91,7 @@ class Products extends \Magento\Framework\App\Action\Action
         return $tmp;
 	}
     public function execute()
-    {        
+    {                
         $items = $this->apiHelperServiceFilterable
                 ->createResponse($this->productRepository, 'Magento\Catalog\Api\Data\ProductInterface');
         

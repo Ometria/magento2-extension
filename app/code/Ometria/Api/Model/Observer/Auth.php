@@ -18,6 +18,7 @@ class Auth
         {
             return;
         }
+        
         $public_key     = $this->config->get('general/apikey');
         $private_key    = $this->config->get('general/privatekey');                
         $method_name    = $this->getMethodNameFromObserver($observer);

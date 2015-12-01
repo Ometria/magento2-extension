@@ -21,7 +21,7 @@ class BaseTest extends \PHPUnit_Framework_TestCase
         $request['signature'] = $signature;
         
         $url .= '?' . http_build_query($request);
-        // echo $url,"\n";
+        echo $url,"\n";
                         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL,$this->baseUrl . $url);                       

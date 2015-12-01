@@ -22,12 +22,16 @@ class Attributes extends \Magento\Framework\App\Action\Action
     {
         $params = $this->getRequest()->getParams();
         $params = array_keys($params);
-        if(count($params) > 1)
-        {
-            throw new \Exception("Invalid Request");
-        }
-        $value = array_shift($params);
+        $value  = array_shift($params);
         return $value;
+        // var_dump($value);
+        // exit;
+        // if(count($params) > 1)
+        // {
+        //     throw new \Exception("Invalid Request");
+        // }
+        // $value = array_shift($params);
+        // return $value;
     }
     
     protected function serializeAttribute($attribute)
