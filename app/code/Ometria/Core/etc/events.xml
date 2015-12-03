@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../lib/internal/Magento/Framework/Event/etc/events.xsd">
+<!-- 
+	<event name="catalog_product_delete_after">
+		<observer name="ometria_catalog_product_delete" instance="Ometria\Core\Model\Observer\Product" method="catalogProductDeleteAfter" />
+	</event>
+ -->
+	<event name="catalog_product_save_after">
+		<observer name="ometria_catalog_product_save" instance="Ometria\Core\Model\Observer\Product" method="catalogProductSaveAfter" />
+	</event>
+<!-- 
+	<event name="controller_action_predispatch_adminhtml_catalog_product_action_attribute_save">
+		<observer name="ometria_catalog_product_mass_action_update_attributes" instance="Ometria\Core\Model\Observer\Product" method="catalogProductUpdateAttributes" />
+	</event>
+	<event name="controller_action_postdispatch_adminhtml_catalog_product_massStatus">
+		<observer name="ometria_catalog_product_mass_action_update_status" instance="Ometria\Core\Model\Observer\Product" method="catalogProductUpdateStatus" />
+	</event>
+	<event name="sales_order_save_after">
+		<observer name="ometria_sales_order_save_after" instance="Ometria\Core\Model\Observer\Order" method="salesOrderSaveAfter" />
+	</event>
+	<event name="customer_save_after">
+		<observer name="ometria_customer_save_after" instance="Ometria\Core\Model\Observer\Customer" method="customerSaveAfter" />
+	</event>
+	<event name="sales_quote_save_after">
+		<observer name="ometria_sales_quote_save_after" instance="Ometria\Core\Model\Observer\Cart" method="basketUpdated" />
+	</event>
+	<event name="customer_login">
+		<observer name="ometria_customer_login" instance="Ometria\Core\Model\Observer\Customer" method="loggedIn" />
+	</event>
+	<event name="customer_logout">
+		<observer name="ometria_customer_logout" instance="Ometria\Core\Model\Observer\Customer" method="loggedOut" />
+	</event>
+	<event name="customer_register_success">
+		<observer name="ometria_customer_register_success" instance="Ometria\Core\Model\Observer\Customer" method="registered" />
+	</event>
+	<event name="sales_order_place_after">
+		<observer name="ometria_sales_order_place_after" instance="Ometria\Core\Model\Observer\Cart" method="orderPlaced" />
+	</event>
+	<event name="newsletter_subscriber_save_before">
+		<observer name="ometria_newsletter_subscriber_save_before" instance="Ometria\Core\Model\Observer\Newsletter" method="handleSubscriberUpdate" />
+	</event>
+	<event name="newsletter_subscriber_delete_after">
+		<observer name="ometria_newsletter_subscriber_delete_after" instance="Ometria\Core\Model\Observer\Newsletter" method="handleSubscriberDeletion" />
+	</event>
+ -->
+</config>

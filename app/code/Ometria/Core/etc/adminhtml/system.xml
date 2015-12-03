@@ -54,7 +54,9 @@
 				</field>
 				<field id="productmode" translate="label" type="select" sortOrder="1110" showInDefault="1" showInWebsite="0" showInStore="0">
 					<label>Product Identifier Mode</label>
-					<source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+					<!-- <source_model>Magento\Config\Model\Config\Source\Yesno</source_model> -->
+					
+					<source_model>Ometria\Core\Model\ConfigSourceProductIdentifierMode</source_model>
 				</field>
 				<field id="unique_id" translate="label" type="text" sortOrder="1120" showInDefault="1" showInWebsite="0" showInStore="0">
 					<label>Unique Magento ID</label>

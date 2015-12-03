@@ -12,7 +12,7 @@
 				<ping>0</ping>
 				<scriptload>0</scriptload>
 				<debug>0</debug>
-				<productmode>0</productmode>
+				<productmode>id</productmode>
 				<unique_id>IMPLEMENT_ME</unique_id>
 			</advanced>
 		</ometria>
