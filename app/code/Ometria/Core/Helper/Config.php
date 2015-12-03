@@ -5,13 +5,16 @@ use Magento\Framework\App\Helper\Context;
 class Config extends AbstractHelper 
 {
     protected $coreHelperMageConfig;
-
+    protected $logger;
+    
     public function __construct(
         Context $context,
-        \Ometria\Core\Helper\MageConfig $coreHelperMageConfig        
+        \Ometria\Core\Helper\MageConfig $coreHelperMageConfig, 
+        \Psr\Log\LoggerInterface $logger       
     )
     {
         $this->coreHelperMageConfig = $coreHelperMageConfig;    
+        $this->logger               = $logger;
         return parent::__construct($context);
     }
     
@@ -48,7 +51,8 @@ class Config extends AbstractHelper
         return $this->isEnabled() && $this->getAPIKey() != "";
     }
 
-    public function log($message, $level = Zend_Log::DEBUG) {
+    public function log($message, $level = \Psr\Log\LogLevel::DEBUG) {
+        $this->logger->log($level, $message);
         Mage::log($message, $level, "ometria.log");
     }
 }
