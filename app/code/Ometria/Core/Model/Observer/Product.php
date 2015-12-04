@@ -12,16 +12,17 @@ class Product {
     protected $catalogProductEditActionAttributeHelper;
     protected $helperPing;
     protected $helperProduct;
-
+    protected $helperRequest;
     public function __construct(
         \Magento\Catalog\Helper\Product\Edit\Action\Attribute $catalogProductEditActionAttributeHelper,
         \Ometria\Core\Helper\Ping $helperPing, 
-        \Ometria\Core\Helper\Product $helperProduct
-              
+        \Ometria\Core\Helper\Product $helperProduct,
+        \Ometria\Core\Helper\Get\Request $request              
     ) {
         $this->catalogProductEditActionAttributeHelper = $catalogProductEditActionAttributeHelper;
-        $this->helperPing = $helperPing;        
+        $this->helperPing    = $helperPing;        
         $this->helperProduct = $helperProduct;        
+        $this->helperRequest = $request;
     }
     /**
      * Catalog Product Delete After
@@ -83,7 +84,8 @@ class Product {
     public function catalogProductUpdateStatus(\Magento\Framework\Event\Observer $observer) {
         \Magento\Framework\Profiler::start("Ometria::" . __METHOD__);
 
-        $productIds = Mage::app()->getFrontController()->getRequest()->getParam('product');
+        //$productIds = Mage::app()->getFrontController()->getRequest()->getParam('product');
+        $productIds = $this->helperRequest->getParam('selected');
         $this->updateProducts($productIds);
 
         \Magento\Framework\Profiler::stop("Ometria::" . __METHOD__);

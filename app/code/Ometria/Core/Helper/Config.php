@@ -53,6 +53,6 @@ class Config extends AbstractHelper
 
     public function log($message, $level = \Psr\Log\LogLevel::DEBUG) {
         $this->logger->log($level, $message);
-        Mage::log($message, $level, "ometria.log");
+        // Mage::log($message, $level, "ometria.log");
     }
 }
