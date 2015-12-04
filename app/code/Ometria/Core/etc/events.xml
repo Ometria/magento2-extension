@@ -39,11 +39,9 @@
 		<observer name="ometria_customer_save_after" instance="Ometria\Core\Model\Observer\Customer" method="customerSaveAfter" />
 	</event>
 
-<!-- 
 	<event name="sales_quote_save_after">
 		<observer name="ometria_sales_quote_save_after" instance="Ometria\Core\Model\Observer\Cart" method="basketUpdated" />
 	</event>
- -->
 
  
 <!-- 

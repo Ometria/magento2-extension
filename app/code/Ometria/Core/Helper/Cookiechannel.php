@@ -10,19 +10,17 @@ class Cookiechannel extends AbstractHelper
     const SEPERATOR_IN_COMMANDS = ':';
 
     protected $helperConfig;
-    protected $applicationState;
-    protected $request;
     
+    protected $frontendAreaChecker;
+        
     public function __construct(
         Context $context,
         \Ometria\Core\Helper\Config $helperConfig,
-        \Magento\Framework\App\State $applicationState,
-        \Magento\Framework\App\RequestInterface $request      
+        \Ometria\Core\Helper\Is\Frontend $frontendAreaChecker              
     )        
     {
-        $this->request          = $request;
-        $this->helperConfig     = $helperConfig;    
-        $this->applicationState = $applicationState;
+        $this->helperConfig         = $helperConfig;    
+        $this->frontendAreaChecker  = $frontendAreaChecker;        
         return parent::__construct($context);
     }
         
@@ -33,10 +31,11 @@ class Cookiechannel extends AbstractHelper
         // Return if admin area or API call
         // if (Mage::app()->getStore()->isAdmin()) return;
         // if (Mage::getSingleton('api/server')->getAdapter() != null) return;
-        if($this->applicationState->getAreaCode() !== 'frontend' && $this->request->getModuleName() !== 'ometria_api')
+        if(!$this->frontendAreaChecker->check())
         {
             return;
         }
+
         //$ometria_config_helper = Mage::helper('ometria/config');
         $ometria_config_helper = $this->helperConfig;
         if (!$ometria_config_helper->isConfigured()) return;
