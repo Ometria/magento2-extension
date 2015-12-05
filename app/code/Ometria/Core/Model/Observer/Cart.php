@@ -10,14 +10,18 @@ class Cart
     protected $helperCookiechannel;
     protected $cartModel;
     protected $storeManager;
-    
+    protected $helperPing;        
+    protected $helperSession;
+            
     public function __construct(
         \Ometria\Core\Helper\Product $helperProduct,    
         \Ometria\Core\Helper\Cookiechannel $helperCookiechannel,            
         \Ometria\Core\Helper\Is\Frontend $frontendAreaChecker,
         \Magento\Checkout\Model\Cart $cartModel,
         \Magento\Catalog\Model\ProductFactory $productFactory,
-        \Magento\Store\Model\StoreManagerInterface $storeManager
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
+        \Ometria\Core\Helper\Session $helperSession,        
+        \Ometria\Core\Helper\Ping $helperPing
     )
     {
         $this->frontendAreaChecker  = $frontendAreaChecker;
@@ -26,6 +30,8 @@ class Cart
         $this->cartModel            = $cartModel;
         $this->productFactory       = $productFactory;
         $this->storeManager         = $storeManager;
+        $this->helperPing           = $helperPing;
+        $this->helperSession        = $helperSession;        
     }
     
     public function basketUpdated(Observer $observer){
@@ -94,11 +100,11 @@ class Cart
 
     public function orderPlaced(Observer $observer){
 
-        $ometria_session_helper = Mage::helper('ometria/session');
-        $ometria_cookiechannel_helper = Mage::helper('ometria/cookiechannel');
+        $ometria_session_helper         = $this->helperSession;
+        $ometria_cookiechannel_helper   = $this->helperCookiechannel;
 
         try{
-            $ometria_ping_helper = Mage::helper('ometria/ping');
+            $ometria_ping_helper = $this->helperPing;
             $order = $observer->getEvent()->getOrder();
             $session_id = $ometria_session_helper->getSessionId();
             if ($session_id) {
@@ -107,11 +113,9 @@ class Cart
             $ometria_cookiechannel_helper->addCommand(array('trans', $order->getIncrementId()));
 
             // If via front end, also identify via cookie channel (but do not replace if customer login has done it)
-            $is_frontend = true;
-            if (Mage::app()->getStore()->isAdmin()) $is_frontend=false;
-            if (Mage::getSingleton('api/server')->getAdapter() != null) $is_frontend=false;
+            $is_frontend = $this->frontendAreaChecker->check();
             if ($is_frontend){
-                $ometria_cookiechannel_helper = Mage::helper('ometria/cookiechannel');
+                $ometria_cookiechannel_helper = $this->helperCookiechannel;
 
                 if ($order->getCustomerIsGuest()){
                     $identify_type = 'guest_checkout';
