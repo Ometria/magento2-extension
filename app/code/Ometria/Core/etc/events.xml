@@ -42,6 +42,14 @@
 	<event name="sales_quote_save_after">
 		<observer name="ometria_sales_quote_save_after" instance="Ometria\Core\Model\Observer\Cart" method="basketUpdated" />
 	</event>
+	
+	<event name="newsletter_subscriber_save_before">
+		<observer name="ometria_newsletter_subscriber_save_before" instance="Ometria\Core\Model\Observer\Newsletter" method="handleSubscriberUpdate" />
+	</event>
+	
+	<event name="newsletter_subscriber_delete_after">
+		<observer name="ometria_newsletter_subscriber_delete_after" instance="Ometria\Core\Model\Observer\Newsletter" method="handleSubscriberDeletion" />
+	</event>
 
  
 <!-- 
@@ -55,15 +63,6 @@
 		<observer name="ometria_sales_order_place_after" instance="Ometria\Core\Model\Observer\Cart" method="orderPlaced" />
 	</event>
  -->
-<!-- 
-	<event name="newsletter_subscriber_save_before">
-		<observer name="ometria_newsletter_subscriber_save_before" instance="Ometria\Core\Model\Observer\Newsletter" method="handleSubscriberUpdate" />
-	</event>
- -->
-<!-- 
-	<event name="newsletter_subscriber_delete_after">
-		<observer name="ometria_newsletter_subscriber_delete_after" instance="Ometria\Core\Model\Observer\Newsletter" method="handleSubscriberDeletion" />
-	</event>
- -->
+
 
 </config>
