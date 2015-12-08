@@ -3,7 +3,6 @@
     <body>
         <referenceBlock name="head.additional">
             <block class="Ometria\Core\Block\Head" name="ometria.head" as="ometria.head" template="Ometria_Core::head.phtml" ifconfig="ometria/general/enabled"/>
-            <!--  ifconfig="ometria/general/enabled"/ -->
         </referenceBlock>
     </body>
 </page>
