@@ -44,10 +44,6 @@
 					<label>Ping Ometria on record update</label>
 					<source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
 				</field>
-				<field id="scriptload" translate="label" type="select" sortOrder="1090" showInDefault="1" showInWebsite="1" showInStore="1">
-					<label>Defer script load</label>
-					<source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-				</field>
 				<field id="debug" translate="label" type="select" sortOrder="1100" showInDefault="1" showInWebsite="0" showInStore="0">
 					<label>Debug Mode</label>
 					<source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
