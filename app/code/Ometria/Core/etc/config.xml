@@ -8,9 +8,8 @@
 				<privatekey></privatekey>
 			</general>
 			<advanced>
-				<univar>0</univar>
-				<ping>0</ping>
-				<scriptload>0</scriptload>
+				<univar>1</univar>
+				<ping>1</ping>
 				<debug>0</debug>
 				<productmode>id</productmode>
 				<unique_id></unique_id>
