@@ -7,7 +7,7 @@
 		<section id="ometria" translate="label" type="text" sortOrder="1010" showInDefault="1" showInWebsite="1" showInStore="1">
 			<label>Analytics Settings</label>
 			<tab>ometria</tab>
-			<resource>Xxxxxxxx_Yxxx::foo</resource>
+			<resource>Ometria_Core::config_ometria</resource>
 			<group id="general" translate="label" type="text" sortOrder="1020" showInDefault="1" showInWebsite="1" showInStore="1">
 				<label>General</label>
 				<frontend_model>Ometria\Core\Block\System\Config\Form\Fieldset\Modules\Group</frontend_model>
