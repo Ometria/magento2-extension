@@ -8,6 +8,7 @@ class Index extends \Magento\Framework\App\Action\Action
     protected $salesModelQuote;
     protected $messageManager;        
     protected $checkoutSession;
+    protected $session;
     
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
@@ -17,9 +18,13 @@ class Index extends \Magento\Framework\App\Action\Action
         \Magento\Framework\Controller\Result\RedirectFactory $controllerResultRedirectFactory, 
         \Magento\Quote\Model\Quote $salesModelQuote,
         \Magento\Framework\Message\ManagerInterface $messageManager,
-        \Magento\Checkout\Model\Cart $cart
+        \Magento\Checkout\Model\Cart $cart,
+        \Magento\Framework\Session\SessionManagerInterface $session,
+        \Magento\Customer\Model\Visitor $visitor       
     )
     {
+        $this->visitor                          = $visitor;
+        $this->session                          = $session;
         $this->messageManager                   = $messageManager;
         $this->customerModelSession             = $customerModelSession;
         $this->abandonedCartsHelperConfig       = $abandonedCartsHelperConfig;
@@ -74,22 +79,18 @@ class Index extends \Magento\Framework\App\Action\Action
             $quote->setIsActive(true);
             $quote->save();
             $this->checkoutSession->setQuoteId($quote->getId());           
+            $data = $this->session->getVisitorData();
+            $data['quote_id'] = $quote->getId();
+            $this->session->setVisitorData($data);
+            $this->visitor->setData($data)->save();
             
-
             $cart_path = $helper->getCartUrl();
-                                                
-            if (substr($cart_path,0,7)=='http://' || substr($cart_path,0,8)=='https://')
-            {
-                return $this->resultFactory->create(
-                    \Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT
-                    )->setUrl($cart_path);
-            } 
-            else 
-            {
-                return $this->resultFactory->create(
-                    \Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT
-                    )->setUrl($cart_path);
-            }
+                                      
+            return $this->resultFactory->create(
+                \Magento\Framework\Controller\ResultFactory::TYPE_PAGE);                                                
+            // return $this->resultFactory->create(
+            //     \Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT
+            //     )->setUrl($cart_path);                
         } 
         else 
         {
