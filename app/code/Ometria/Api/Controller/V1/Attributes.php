@@ -24,14 +24,6 @@ class Attributes extends \Magento\Framework\App\Action\Action
         $params = array_keys($params);
         $value  = array_shift($params);
         return $value;
-        // var_dump($value);
-        // exit;
-        // if(count($params) > 1)
-        // {
-        //     throw new \Exception("Invalid Request");
-        // }
-        // $value = array_shift($params);
-        // return $value;
     }
     
     protected function serializeAttribute($attribute)
@@ -48,9 +40,17 @@ class Attributes extends \Magento\Framework\App\Action\Action
         $type   = $attribute->getAttributeCode();
         foreach($options as $key=>$option)
         {
-            $option['@type'] = 'attribute';
-            $option['type']  = $type;
-            $options[$key]    = $option;
+            $option['@type']    = 'attribute';
+            $option['type']     = $type;
+            $options[$key]      = $option;
+            
+            $options[$key]['id']      = $options[$key]['value'];
+            $options[$key]['title']   = $options[$key]['label'];
+            
+            unset($options[$key]['value']);
+            unset($options[$key]['label']);
+//             unset($options['value']);
+//             unset($options['title']);
         }
         
         sort($options);
