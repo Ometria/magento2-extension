@@ -6,26 +6,61 @@ class Orders
     {
         return [
             "@type"  => "order",
-            "id"     => "123553",
-            "status" => "complete",
-            "is_valid" => true,
-            "customer" => true,
-            "lineitems"=>[],
-            "timestamp"=>"2015-01-02T09:00:00+00",
-            "subtotal"=>99.99,
-            "discount"=>-10.00,
-            "shipping"=>0,
-            "tax"=>0,
-            "grand_total"=>99.99,
-            "total_refunded"=>0.00,
-            "currency"=>"GBP",
-            "channel"=>"online",
-            "store"=>"mysite.com/en",
-            "payment_method"=>"card",
-            "shipping_method"=>"standard",
-            "shipping_address"=>((object)[]),            
-            "billing_address"=>((object)[]),
-            "coupon_code"=>"FJ45-TJ5Y-5YK3-T894"
+            "id"     => "",
+            "status" => "",
+            "is_valid" => '',
+            "customer" => self::getBlankCustomer(),
+            "lineitems"=>[self::getBlankLineItem()],
+            "timestamp"=>"",
+            "subtotal"=>'',
+            "discount"=>'',
+            "shipping"=>'',
+            "tax"=>'',
+            "grand_total"=>'',
+            "total_refunded"=>'',
+            "currency"=>"",
+            "channel"=>"",
+            "store"=>"",
+            "payment_method"=>"",
+            "shipping_method"=>"",
+            "shipping_address"=>self::getBlankAddress(),            
+            "billing_address"=>self::getBlankAddress(),
+            "coupon_code"=>""
         ];
     }
+    
+    static public function getBlankAddress()
+    {
+        return [
+            "city"          => "",
+            "state"         => "",
+            "postcode"      => "",
+            "country_code"  => ""        
+        ];
+    }
+        
+    static public function getBlankLineItem()
+    {
+        return [
+            "product"           => '',
+            "variant_id"        => "",
+            "variant_options"   => '',
+            "sku"               => '',
+            "quantity"          => '',
+            "unit_price"        => '',
+            "total"             => ''
+        ];
+    }
+    
+    static public function getBlankCustomer()
+    {
+        return [
+            "id"            => "",
+            "firstname"     => "",
+            "lastname"      => "",
+            "email"         => ""        
+        ];
+    }
+    
+    
 }

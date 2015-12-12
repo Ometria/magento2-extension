@@ -14,7 +14,7 @@ class OrdersTest extends BaseTest
     public function testOrders()
     {
         $blank_results = Helper::getBlankArray();
-        $result = $this->getUrl('/ometria_api/v1/ENDPOINT');        
+        $result = $this->getUrl('/ometria_api/v1/orders');        
         $result = json_decode($result);        
         
         $keys1 = array_keys($blank_results);
