@@ -110,27 +110,30 @@ class Products extends \Magento\Framework\App\Action\Action
         $searchCriteria = $this->helperOmetriaApiFilter
             ->applyFilertsToSearchCriteria($this->searchCriteria);
                    
-        $collection = $this->productCollection->addAttributeToSelect('*');
+        $collection = $this->productCollection
+            ->addAttributeToSelect('category')
+            ->addAttributeToSelect('*');
         
         foreach ($searchCriteria->getFilterGroups() as $group) {
             $this->addFilterGroupToCollection($group, $collection);
         }
 
         $page_size = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
-        if($page_size)
-        {                            
-            $collection->setPageSize($page_size);
-        }            
+        $page_size = $page_size ? $page_size : 100;
+        $collection->setPageSize($page_size);
         
         $current_page = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
-        if($current_page)
-        {
-            $collection->setCurPage($current_page);
-        }
+        $current_page = $current_page ? $current_page : 1;
+        $collection->setCurPage($current_page);
         
+        $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
+        $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
+                
         $items      = array_map(function($item){
-            return $this->dataObjectProcessor->buildOutputDataArray($item, 
+            $item = $this->dataObjectProcessor->buildOutputDataArray($item, 
                 'Magento\Catalog\Api\Data\ProductInterface');
+
+            return $this->serializeItem($item);                
         }, $collection->getItems());
         
         $items = array_values($items);
