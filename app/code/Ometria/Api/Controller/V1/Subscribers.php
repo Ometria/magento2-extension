@@ -107,6 +107,6 @@ class Subscribers extends \Magento\Framework\App\Action\Action
             unset($fields[0]['attribute']);
             $filter = $fields[0];
             $collection->addFieldToFilter($attribute, $filter);
-        }
+        }        
     }      
 }

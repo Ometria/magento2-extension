@@ -10,7 +10,10 @@ class Products extends \Magento\Framework\App\Action\Action
     protected $attributes;
     protected $helperCategory;
     protected $response;
-    
+    protected $productCollection;
+    protected $helperOmetriaApiFilter;
+    protected $searchCriteria;
+            
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
@@ -18,7 +21,10 @@ class Products extends \Magento\Framework\App\Action\Action
 		\Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
 		\Magento\Catalog\Model\Resource\Product\Attribute\Collection $attributes,
 		\Ometria\Api\Helper\Category $helperCategory,
-		\Magento\Framework\App\ResponseInterface $response
+		\Magento\Framework\App\ResponseInterface $response,
+		\Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,	
+		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,			
+		\Magento\Catalog\Model\Resource\Product\Collection $productCollection
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory          = $resultJsonFactory;
@@ -27,6 +33,9 @@ class Products extends \Magento\Framework\App\Action\Action
 		$this->attributes                 = $attributes;
 		$this->helperCategory             = $helperCategory;
 		$this->response                   = $response;
+		$this->productCollection          = $productCollection;
+		$this->helperOmetriaApiFilter     = $helperOmetriaApiFilter;	
+		$this->searchCriteria             = $searchCriteria;			
 	}
 	
 	protected function getArrayKey($array, $key)
@@ -91,7 +100,23 @@ class Products extends \Magento\Framework\App\Action\Action
         return $tmp;
 	}
     public function execute()
-    {                
+    {      
+    //         $searchCriteria = $this->helperOmetriaApiFilter
+    //             ->applyFilertsToSearchCriteria($this->searchCriteria);
+    //                    
+    //         $collection = $this->productCollection->addAttributeToSelect('*');
+    //         
+    //         foreach ($searchCriteria->getFilterGroups() as $group) {
+    //             $this->addFilterGroupToCollection($group, $collection);
+    //         }
+    // 
+    //         $items      = array_map(function($item){
+    //             return $item->getData();
+    //         }, $collection->getItems());
+    //         sort($items);
+    //                                                   
+    //         var_dump($items);
+    //         exit;
         $items = $this->apiHelperServiceFilterable
                 ->createResponse($this->productRepository, 'Magento\Catalog\Api\Data\ProductInterface');
         
@@ -103,5 +128,26 @@ class Products extends \Magento\Framework\App\Action\Action
 
 		$result = $this->resultJsonFactory->create();
 		return $result->setData($items_result);
-    }    
+    }  
+    
+    protected function addFilterGroupToCollection(
+        \Magento\Framework\Api\Search\FilterGroup $filterGroup,
+        \Magento\Catalog\Model\Resource\Product\Collection $collection
+    ) {
+        $fields = [];
+        foreach ($filterGroup->getFilters() as $filter) {
+            $condition = $filter->getConditionType() ? $filter->getConditionType() : 'eq';
+            $fields[] = ['attribute' => $filter->getField(), $condition => $filter->getValue()];
+        }
+        if(count($fields) > 1)
+        {
+            throw new \Exception("Can't handle multiple OR filters");
+        }
+        if ($fields) {
+            $attribute = $fields[0]['attribute'];
+            unset($fields[0]['attribute']);
+            $filter = $fields[0];
+            $collection->addFieldToFilter($attribute, $filter);
+        }
+    }        
 }

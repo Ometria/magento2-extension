@@ -32,6 +32,15 @@ class Service
             $groups[]      = $group_ids;
         }
 
+        //entity ids
+        $ids = $this->request->getParam('website_ids');
+        if($ids)
+        {
+            $ids = is_array($ids) ? $ids : [$ids];        
+            $group_ids = $this->createSingleFilterFilterGroup('website', $ids, 'in');
+            $groups[]      = $group_ids;
+        }
+        
         //store ids
         $store_ids = $this->request->getParam('stores');
         if($store_ids)
