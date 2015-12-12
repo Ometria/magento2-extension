@@ -21,6 +21,8 @@ class OrdersTest extends BaseTest
         $keys2 = array_keys((array) $result[0]);
         
         $this->assertTrue(is_object($result) || is_array($result));
+        sort($keys1);
+        sort($keys2);
         $this->assertEquals($keys1, $keys2);
     }
 

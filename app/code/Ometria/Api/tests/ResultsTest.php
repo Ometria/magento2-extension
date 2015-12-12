@@ -11,7 +11,7 @@ class ResultsTest extends BaseTest
         $this->baseUrl = $this->getEnv('baseUrl');
     }
     
-    public function testOrders()
+    public function testResults()
     {
         $blank_results = Helper::getBlankArray();
         $result = $this->getUrl('/ometria_api/v1/orders');        
@@ -21,6 +21,8 @@ class ResultsTest extends BaseTest
         $keys2 = array_keys((array) $result[0]);
         
         $this->assertTrue(is_object($result) || is_array($result));
+        sort($keys1);
+        sort($keys2);        
         $this->assertEquals($keys1, $keys2);
     }
 

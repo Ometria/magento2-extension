@@ -11,7 +11,7 @@ class AttributeTypesTest extends BaseTest
         $this->baseUrl = $this->getEnv('baseUrl');
     }
     
-    public function testOrders()
+    public function testAttributeTypes()
     {
         $blank_results = Helper::getBlankArray();
         $result = $this->getUrl('/ometria_api/v1/attribute_types');        

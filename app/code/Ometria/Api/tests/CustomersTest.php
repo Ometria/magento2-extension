@@ -11,7 +11,7 @@ class CustomersTest extends BaseTest
         $this->baseUrl = $this->getEnv('baseUrl');
     }
     
-    public function testOrders()
+    public function testCustomers()
     {
         $blank_results = Helper::getBlankArray();
         $result = $this->getUrl('/ometria_api/v1/customers');        

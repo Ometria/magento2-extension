@@ -10,6 +10,8 @@ class Orders extends \Magento\Framework\App\Action\Action
     protected $paymentsCollection;
     protected $salesOrderAddressFactory;
     protected $ordersCollection;
+    protected $orderValidTester;
+    
     
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
@@ -18,7 +20,8 @@ class Orders extends \Magento\Framework\App\Action\Action
 		\Magento\Sales\Api\OrderRepositoryInterface $orderRepository,
 		\Magento\Sales\Model\Resource\Order\Payment\Collection $paymentsCollection,
 		\Magento\Sales\Model\Order\AddressFactory $salesOrderAddressFactory,
-		\Magento\Sales\Model\Resource\Order\Collection $ordersCollection		
+		\Magento\Sales\Model\Resource\Order\Collection $ordersCollection,
+		\Ometria\Api\Helper\Order\IsValid $orderValidTester		
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory           = $resultJsonFactory;
@@ -27,6 +30,7 @@ class Orders extends \Magento\Framework\App\Action\Action
 		$this->salesOrderAddressFactory    = $salesOrderAddressFactory;
 		$this->paymentsCollection          = $paymentsCollection;
 		$this->ordersCollection            = $ordersCollection;
+		$this->orderValidTester            = $orderValidTester;
 	}
 	
 	protected function formatItems($items)
@@ -38,7 +42,8 @@ class Orders extends \Magento\Framework\App\Action\Action
                 '@type' => 'order', 
                 'id' =>             $item['entity_id'], 
                 'status' =>         $item['status'],
-                'is_valid' =>       true,
+                'state'  =>         $item['state'],
+                'is_valid' =>       $this->orderValidTester->fromItem($item),
                 'customer' =>   [
                     'id'        => $item['customer_id'],
                     'firstname' => $item['customer_firstname'],

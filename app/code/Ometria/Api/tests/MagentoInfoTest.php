@@ -11,7 +11,7 @@ class MagentoInfoTest extends BaseTest
         $this->baseUrl = $this->getEnv('baseUrl');
     }
     
-    public function testOrders()
+    public function testInfo()
     {
         $blank_results = Helper::getBlankArray();
         $result = $this->getUrl('/ometria_api/v1/magento_info');        

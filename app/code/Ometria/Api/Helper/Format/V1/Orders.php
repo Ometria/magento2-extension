@@ -6,8 +6,10 @@ class Orders
     {
         return [
             "@type"  => "order",
+            'state'  => '',
             "id"     => "",
             "status" => "",
+            "state"  => "",
             "is_valid" => '',
             "customer" => self::getBlankCustomer(),
             "lineitems"=>[self::getBlankLineItem()],

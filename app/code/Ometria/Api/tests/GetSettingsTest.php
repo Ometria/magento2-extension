@@ -11,7 +11,7 @@ class GetSettingsTest extends BaseTest //\PHPUnit_Framework_TestCase
         $this->baseUrl = $this->getEnv('baseUrl');
     }
     
-    public function testOrders()
+    public function testGetSettings()
     {
         $blank_results = Helper::getBlankArray();
         $result = $this->getUrl('/ometria_api/v1/get_settings');        
