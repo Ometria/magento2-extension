@@ -2,7 +2,7 @@
 require_once 'app/autoload.php';
 require_once 'BaseTest.php';
 
-use Ometria\Api\Helper\Format\V1\Orders as Helper;
+use Ometria\Api\Helper\Format\V1\Customers as Helper;
 class CustomersTest extends BaseTest
 {
     protected $baseUrl;
@@ -14,7 +14,7 @@ class CustomersTest extends BaseTest
     public function testOrders()
     {
         $blank_results = Helper::getBlankArray();
-        $result = $this->getUrl('/ometria_api/v1/ENDPOINT');        
+        $result = $this->getUrl('/ometria_api/v1/customers');        
         $result = json_decode($result);        
         
         $keys1 = array_keys($blank_results);

@@ -40,8 +40,6 @@ class Service
                 $new = $item->getData();
             }
             
-            var_dump($new);
-            exit;
             $items[] = $new;
         }
         
