@@ -15,13 +15,8 @@ class Product extends \Ometria\Api\Helper\Service\Filterable\Service
         return parent::__construct($searchCriteria, $helperOmetriaApiFilter, $dataObjectProcessor);
     }
     
-    public function createResponse($repository, $serialize_as)
+    public function processList($list, $serialize_as)
     {
-        $searchCriteria = $this->helperOmetriaApiFilter
-            ->applyFilertsToSearchCriteria($this->searchCriteria);
-            
-        $list = $repository->getList($searchCriteria);
-
         $items = [];
         foreach($list->getItems() as $item)
         {
@@ -44,6 +39,16 @@ class Product extends \Ometria\Api\Helper\Service\Filterable\Service
             $items[] = $new;
         }
         
-        return $items;    
+        return $items;     
+    }
+    
+    public function createResponse($repository, $serialize_as)
+    {
+        $searchCriteria = $this->helperOmetriaApiFilter
+            ->applyFilertsToSearchCriteria($this->searchCriteria);
+            
+        $list = $repository->getList($searchCriteria, $serialize_as);
+        
+        return $this->processList($list, $serialize_as);   
     }
 }

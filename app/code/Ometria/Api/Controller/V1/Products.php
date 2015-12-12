@@ -15,6 +15,8 @@ class Products extends \Magento\Framework\App\Action\Action
     protected $searchCriteria;
     protected $dataObjectProcessor;            
     protected $storeManager;
+    protected $metadataService;
+    protected $searchCriteriaBuilder;
     
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
@@ -28,9 +30,13 @@ class Products extends \Magento\Framework\App\Action\Action
 		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,			
 		\Magento\Catalog\Model\Resource\Product\Collection $productCollection,
 		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor,
-		\Magento\Store\Model\StoreManagerInterface $storeManager
+		\Magento\Store\Model\StoreManagerInterface $storeManager,
+        \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
+        \Magento\Catalog\Api\ProductAttributeRepositoryInterface $metadataServiceInterface
 	) {
 		parent::__construct($context);
+		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
+		$this->metadataService            = $metadataServiceInterface;
 		$this->resultJsonFactory          = $resultJsonFactory;
 		$this->apiHelperServiceFilterable = $apiHelperServiceFilterable;
 		$this->productRepository          = $productRepository;
@@ -109,10 +115,11 @@ class Products extends \Magento\Framework\App\Action\Action
     {      
         $searchCriteria = $this->helperOmetriaApiFilter
             ->applyFilertsToSearchCriteria($this->searchCriteria);
-                   
-        $collection = $this->productCollection
-            ->addAttributeToSelect('category')
-            ->addAttributeToSelect('*');
+
+        $collection = $this->productCollection;
+        foreach ($this->metadataService->getList($this->searchCriteriaBuilder->create())->getItems() as $metadata) {         
+            $collection->addAttributeToSelect($metadata->getAttributeCode());
+        }                   
         
         foreach ($searchCriteria->getFilterGroups() as $group) {
             $this->addFilterGroupToCollection($group, $collection);
@@ -128,28 +135,28 @@ class Products extends \Magento\Framework\App\Action\Action
         
         $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
         $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
-                
+        
+        $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
+                     
         $items      = array_map(function($item){
-            $item = $this->dataObjectProcessor->buildOutputDataArray($item, 
-                'Magento\Catalog\Api\Data\ProductInterface');
-
             return $this->serializeItem($item);                
-        }, $collection->getItems());
+        }, $items);
         
         $items = array_values($items);
         $result = $this->resultJsonFactory->create();
         return $result->setData($items);
 		
 		//old repository based code
-        //$items = $this->apiHelperServiceFilterable
+        // $items = $this->apiHelperServiceFilterable
         //        ->createResponse($this->productRepository, 'Magento\Catalog\Api\Data\ProductInterface');
-        //
-        //$items_result = [];       
-        //foreach($items as $item)
-        //{
-        //    $items_result[] = $this->serializeItem($item);;
-        //}
-
+        // 
+        // $items_result = [];       
+        // foreach($items as $item)
+        // {
+        //     $items_result[] = $this->serializeItem($item);;
+        // }
+        // $result = $this->resultJsonFactory->create();
+        // return $result->setData($items_result);
 
     }  
     
