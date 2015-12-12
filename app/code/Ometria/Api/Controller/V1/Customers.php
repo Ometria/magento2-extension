@@ -10,6 +10,7 @@ class Customers extends \Magento\Framework\App\Action\Action
     protected $genderOptions;
     protected $subscriberCollection;
     protected $customerIdsOfNewsLetterSubscribers=[];
+    protected $customerDataHelper;
     
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
@@ -17,7 +18,8 @@ class Customers extends \Magento\Framework\App\Action\Action
 		\Ometria\Api\Helper\Service\Filterable\Service $apiHelperServiceFilterable,
 		\Magento\Customer\Api\CustomerRepositoryInterface $customerRepository,
 		\Magento\Customer\Api\CustomerMetadataInterface $customerMetadataInterface,
-		\Magento\Newsletter\Model\Resource\Subscriber\Collection $subscriberCollection
+		\Magento\Newsletter\Model\Resource\Subscriber\Collection $subscriberCollection,
+        \Ometria\Api\Helper\CustomerData $customerDataHelper
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory            = $resultJsonFactory;
@@ -25,27 +27,14 @@ class Customers extends \Magento\Framework\App\Action\Action
 		$this->repository                   = $customerRepository;
 		$this->subscriberCollection         = $subscriberCollection;
 		$this->customerMetadataInterface    = $customerMetadataInterface;
+		$this->customerDataHelper           = $customerDataHelper;
 		
 		$this->genderOptions                = $this->customerMetadataInterface
             ->getAttributeMetadata('gender')
             ->getOptions();
 	}
 	
-	protected function getGenderLabel($item)
-	{
-	    $value = array_key_exists('gender', $item) ? $item['gender'] : false;
-        foreach($this->genderOptions as $option)
-        {
-            if($option->getValue() == $value)
-            {
-                return $option->getLabel();
-            }
-        }
-        
-        return '';
-	}
-	
-	protected function getMarketingOption($item, $subscriber_collection)
+	public function getMarketingOption($item, $subscriber_collection)
 	{	        
 	    if(!array_key_exists('id', $item))
 	    {
@@ -62,21 +51,8 @@ class Customers extends \Magento\Framework\App\Action\Action
 
 	    return in_array($item['id'], $this->customerIdsOfNewsLetterSubscribers);	    
 	}
-	
-	protected function getCountryId($item)
-	{
-	    $addresses = array_key_exists('addresses', $item) ? $item['addresses'] : [];
-	    foreach($addresses as $address)
-	    {
-	        if(array_key_exists('country_id', $address))
-	        {
-	            return $address['country_id'];
-	        }	
-	    }
-	    return false;
-	}
-	
-	protected function getSubscriberCollectionFromCustomerIds($customer_ids)
+
+	public function getSubscriberCollectionFromCustomerIds($customer_ids)
 	{
 	    return $this->subscriberCollection
 	        ->addFieldToFilter('customer_id', ['in'=>$customer_ids])
@@ -84,7 +60,7 @@ class Customers extends \Magento\Framework\App\Action\Action
 	            \Magento\Newsletter\Model\Subscriber::STATUS_SUBSCRIBED);	        	
 	}
 	
-	protected function getSubscriberCollection($items)
+	public function getSubscriberCollection($items)
 	{
 	    $customer_ids = array_map(function($item){
 	        return $item['id'];
@@ -92,7 +68,7 @@ class Customers extends \Magento\Framework\App\Action\Action
 	    
 	    return $this->getSubscriberCollectionFromCustomerIds($customer_ids);
 	}
-	
+			
     public function execute()
     {
         $items = $this->apiHelperServiceFilterable->createResponse(
@@ -113,10 +89,10 @@ class Customers extends \Magento\Framework\App\Action\Action
             $new["firstname"]         = array_key_exists('firstname', $item) ? $item['firstname'] : '';
             $new["middlename"]        = array_key_exists('middlename', $item) ? $item['middlename'] : '';
             $new["lastname"]          = array_key_exists('lastname', $item) ? $item['lastname'] : '';
-            $new["gender"]            = $this->getGenderLabel($item);
+            $new["gender"]            = $this->customerDataHelper->getGenderLabel($item);
             $new["date_of_birth"]     = array_key_exists('dob', $item) ? $item['dob'] : '';
             $new["marketing_optin"]   = $this->getMarketingOption($item, $subscriber_collection);
-            $new["country_id"]        = $this->getCountryId($item);    
+            $new["country_id"]        = $this->customerDataHelper->getCountryId($item);    
             return $new;
         }, $items);
         
