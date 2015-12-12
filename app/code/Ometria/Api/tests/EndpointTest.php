@@ -8,7 +8,7 @@ class EndpointTest extends BaseTest
     protected $baseUrl;
     protected function setup()
     {
-        $this->baseUrl = 'http://magento-2-dev-docs.dev';
+        $this->baseUrl = $this->getEnv('baseUrl');
     }
     
     public function testOrders()
@@ -78,8 +78,8 @@ class EndpointTest extends BaseTest
     {
         $domain      = $this->getDomainFromUrl($this->baseUrl);
         $method_name = $this->getMethodNameFromUrl($url);
-        $public_key  = 'abc123';
-        $private_key = '123abc';
+        $public_key  = $this->getEnv('public_key');
+        $private_key = $this->getEnv('private_key');
         
         $request     = [
             'request_timestamp'=>time(),

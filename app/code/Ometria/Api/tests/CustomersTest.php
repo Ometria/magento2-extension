@@ -8,7 +8,7 @@ class CustomersTest extends BaseTest
     protected $baseUrl;
     protected function setup()
     {
-        $this->baseUrl = 'http://magento-2-dev-docs.dev';
+        $this->baseUrl = $this->getEnv('baseUrl');
     }
     
     public function testOrders()

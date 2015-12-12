@@ -4,12 +4,18 @@ use Ometria\Api\Model\Hash;
 
 class BaseTest extends \PHPUnit_Framework_TestCase
 {    
+    public function getEnv($key)
+    {
+        $env = include 'env.php';
+        return $env[$key];
+    }
+    
     protected function getUrl($url)
     {
         $domain      = $this->getDomainFromUrl($this->baseUrl);
         $method_name = $this->getMethodNameFromUrl($url);
-        $public_key  = 'abc123';
-        $private_key = '123abc';
+        $public_key  = $this->getEnv('public_key');
+        $private_key = $this->getEnv('private_key');
         
         $request     = [
             'request_timestamp'=>time(),
@@ -21,7 +27,10 @@ class BaseTest extends \PHPUnit_Framework_TestCase
         $request['signature'] = $signature;
         
         $url .= '?' . http_build_query($request);
-        echo $url,"\n";
+        if($this->getEnv('debug'))
+        {
+            echo $url,"\n";
+        }
                         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL,$this->baseUrl . $url);                       
