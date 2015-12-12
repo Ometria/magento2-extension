@@ -2,6 +2,9 @@
 namespace Ometria\Api\Helper\Filter\V1;
 class Service
 {
+    const PARAM_PAGE_SIZE = 'page_size';
+    const PARAM_CURRENT_PAGE = 'current_page';
+    
     protected $searchCriteriaBuilder;
     protected $filterBuilder;
     protected $filterGroupBuilder;
@@ -81,10 +84,10 @@ class Service
             $groups[]      = $group_simple;          
         }
                                       
-        $page_size = (int) $this->request->getParam('page_size');
+        $page_size = (int) $this->request->getParam(self::PARAM_PAGE_SIZE);
         $page_size = $page_size ? $page_size : 100;                
         
-        $current_page = (int) $this->request->getParam('current_page');
+        $current_page = (int) $this->request->getParam(self::PARAM_CURRENT_PAGE);
         $current_page = $current_page ? $current_page : 1;
         
         return $this->searchCriteriaBuilder
