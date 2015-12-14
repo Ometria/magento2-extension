@@ -9,6 +9,7 @@ class Index extends \Magento\Framework\App\Action\Action
     protected $messageManager;        
     protected $checkoutSession;
     protected $session;
+    protected $cookieHelper;
     
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
@@ -20,7 +21,8 @@ class Index extends \Magento\Framework\App\Action\Action
         \Magento\Framework\Message\ManagerInterface $messageManager,
         \Magento\Checkout\Model\Cart $cart,
         \Magento\Framework\Session\SessionManagerInterface $session,
-        \Magento\Customer\Model\Visitor $visitor       
+        \Magento\Customer\Model\Visitor $visitor, 
+        \Magento\Framework\Stdlib\CookieManagerInterface $cookieHelper     
     )
     {
         $this->visitor                          = $visitor;
@@ -32,6 +34,7 @@ class Index extends \Magento\Framework\App\Action\Action
         $this->salesModelQuote                  = $salesModelQuote;
         $this->checkoutSession                  = $checkoutSession;
         $this->cart                             = $cart;
+        $this->cookieHelper                     = $cookieHelper;        
         return parent::__construct($context);
     }
     
@@ -83,6 +86,7 @@ class Index extends \Magento\Framework\App\Action\Action
             $data['quote_id'] = $quote->getId();
             $this->session->setVisitorData($data);
             $this->visitor->setData($data)->save();
+            // $this->cookieHelper->deleteCookie('mage-cache-sessid');
             
             $cart_path = $helper->getCartUrl();
                                       
