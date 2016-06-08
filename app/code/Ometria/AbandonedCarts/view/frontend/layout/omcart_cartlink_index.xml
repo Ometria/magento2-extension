@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd" layout="1column">
+    <body>
+        <referenceBlock name="content">
+            <block class="Ometria\AbandonedCarts\Block\Redirect" name="ometria.redirect" as="ometria.head" template="Ometria_AbandonedCarts::redirect.phtml" />
+        </referenceBlock>
+    </body>
+</page>

@@ -1,0 +1,17 @@
+<?php if($this->isUnivarEnabled()): ?> 
+    <script type="text/javascript">
+            window.ometria = window.ometria || {};
+            window.ometria.raw_data = <?php echo json_encode($this->getDataLayer()) ?>;
+    </script>
+<?php endif; ?> 
+<script type="text/javascript">
+    (function(){
+        var url=window.location.protocol+"//cdn.ometria.com/tags/<?php echo $this->getAPIKey() ?>.js";
+        setTimeout(function(){
+            var sc=document.createElement('script');
+            sc.src=url;
+            sc.setAttribute('async','true');
+            document.getElementsByTagName("head")[0].appendChild(sc);
+        },50);
+    })();
+</script>

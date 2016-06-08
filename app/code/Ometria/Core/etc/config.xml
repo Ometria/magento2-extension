@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../Store/etc/config.xsd">
+	<default>
+		<ometria>
+			<general>
+				<enabled>1</enabled>
+				<apikey></apikey>
+				<privatekey></privatekey>
+			</general>
+			<advanced>
+				<univar>1</univar>
+				<ping>1</ping>
+				<debug>0</debug>
+				<productmode>id</productmode>
+				<unique_id></unique_id>
+			</advanced>
+		</ometria>
+	</default>
+</config>

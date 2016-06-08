@@ -1,0 +1,11 @@
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../Store/etc/config.xsd">
+	<default>
+		<ometria_abandonedcarts>
+			<abandonedcarts>
+				<cartpath>/checkout/cart</cartpath>
+				<enabled>1</enabled>
+				<check_token>1</check_token>
+			</abandonedcarts>
+		</ometria_abandonedcarts>
+	</default>
+</config>

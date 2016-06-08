@@ -1,0 +1,26 @@
+{
+    "name": "ometria/magento2",
+    "type": "magento2-module",
+    "version": "1.0.0",
+    "description": "Dev composer package for Ometria Extension",
+    "authors": [
+        {
+            "name": "Alastair James",
+            "email": "al.james@gmail.com"
+        }
+    ],
+    "minimum-stability": "beta",
+    "require": {},
+    "autoload": {
+        "files": [
+            "app/code/Ometria/AbandonedCarts/registration.php",
+            "app/code/Ometria/Api/registration.php",
+            "app/code/Ometria/Core/registration.php"
+        ],
+        "psr-4": {
+            "Ometria\\AbandonedCarts\\": "app/code/Ometria/AbandonedCarts",
+            "Ometria\\Api\\": "app/code/Ometria/Api",
+            "Ometria\\Core\\": "app/code/Ometria/Core"            
+        }
+    }    
+}
