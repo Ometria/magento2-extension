@@ -1,7 +1,8 @@
 <?php
 namespace Ometria\Api\Controller\V1\Get;
 use Ometria\Api\Helper\Config;
-class Settings extends \Magento\Framework\App\Action\Action
+use \Ometria\Api\Controller\V1\Base;
+class Settings extends Base
 {
     protected $resultJsonFactory;    
     protected $helperConfig;
@@ -24,7 +25,9 @@ class Settings extends \Magento\Framework\App\Action\Action
     {
         $values = $this->helperConfig->get();    
         $data   = [Config::CONFIG_TOP=>$values];
-        
+
+        $values = $this->helperConfig->get(null, Config::CONFIG_TOP_ABANDONEDCARTS);    
+        $data[Config::CONFIG_TOP_ABANDONEDCARTS] = $values;        
         
         $path = 'advanced/unique_id';
         if(!$this->helperConfig->get($path))

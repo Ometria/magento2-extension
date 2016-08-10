@@ -34,12 +34,15 @@ class Service
                     $item,
                     $serialize_as                
                 );        
-            }
-            else
+            }            
+            else if(is_callable([$item, 'getData']))
             {
                 $new = $item->getData();
             }
-            
+            else
+            {
+                $new = $item;
+            }
             $items[] = $new;
         }
         

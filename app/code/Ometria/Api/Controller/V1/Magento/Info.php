@@ -2,7 +2,8 @@
 namespace Ometria\Api\Controller\V1\Magento;
 use Ometria\Api\Helper\Format\V1\Magento\Info as Helper;
 use ReflectionClass;
-class Info extends \Magento\Framework\App\Action\Action
+use \Ometria\Api\Controller\V1\Base;
+class Info extends Base
 {
     protected $resultJsonFactory;
     protected $scopeConfig;

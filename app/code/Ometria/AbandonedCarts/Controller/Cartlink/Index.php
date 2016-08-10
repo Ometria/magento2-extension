@@ -43,7 +43,7 @@ class Index extends \Magento\Framework\App\Action\Action
         $message_incorrect_link = 'Cart link is incorrect or expired';
         $session = $this->customerModelSession;
         $helper  = $this->abandonedCartsHelperConfig;
-
+        
         if (!$helper->isDeeplinkEnabled())
         {
             return $this->resultFactory->create(

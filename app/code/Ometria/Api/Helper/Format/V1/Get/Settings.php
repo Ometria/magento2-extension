@@ -6,6 +6,7 @@ class Settings
     {
         return [
             "ometria"=>"",
+            "ometria_abandonedcarts"=>""
         ];
     }
 }

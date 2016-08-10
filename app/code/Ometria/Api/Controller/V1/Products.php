@@ -1,7 +1,8 @@
 <?php
 namespace Ometria\Api\Controller\V1;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
-class Products extends \Magento\Framework\App\Action\Action
+use \Ometria\Api\Controller\V1\Base;
+class Products extends Base
 {
     protected $resultJsonFactory;
     protected $apiHelperServiceFilterable;

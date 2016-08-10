@@ -1,6 +1,7 @@
 <?php
 namespace Ometria\Api\Controller\V1;
-class Categories extends \Magento\Framework\App\Action\Action
+use \Ometria\Api\Controller\V1\Base;
+class Categories extends Base
 {
     protected $resultJsonFactory;
     

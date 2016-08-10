@@ -2,7 +2,8 @@
 namespace Ometria\Api\Controller\V1;
 use Ometria\Api\Helper\Format\V1\Version as Helper;
 
-class Version extends \Magento\Framework\App\Action\Action
+use \Ometria\Api\Controller\V1\Base;
+class Version extends Base
 {
     protected $resultJsonFactory;
     protected $moduleResource;

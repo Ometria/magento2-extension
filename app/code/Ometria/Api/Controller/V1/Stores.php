@@ -1,7 +1,8 @@
 <?php
 namespace Ometria\Api\Controller\V1;
 use Ometria\Api\Helper\Format\V1\Stores as Helper;
-class Stores extends \Magento\Framework\App\Action\Action
+use \Ometria\Api\Controller\V1\Base;
+class Stores extends Base
 {
     protected $resultJsonFactory;
     protected $storeFactory;

@@ -1,7 +1,8 @@
 <?php
 namespace Ometria\Api\Controller\V1\Attribute;
 use Ometria\Api\Helper\Format\V1\Attribute\Types as Helper;
-class Types extends \Magento\Framework\App\Action\Action
+use \Ometria\Api\Controller\V1\Base;
+class Types extends Base
 {
     protected $resultJsonFactory;
     protected $attributes;

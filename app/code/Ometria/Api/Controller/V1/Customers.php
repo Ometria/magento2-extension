@@ -2,7 +2,8 @@
 namespace Ometria\Api\Controller\V1;
 use Ometria\Api\Helper\Format\V1\Customers as Helper;
 
-class Customers extends \Magento\Framework\App\Action\Action
+use \Ometria\Api\Controller\V1\Base;
+class Customers extends Base
 {
     protected $resultJsonFactory;
     protected $repository;

@@ -129,7 +129,16 @@ class Service
                 [\Magento\Catalog\Model\Product\Visibility::VISIBILITY_NOT_VISIBLE], 
                 'in');            
         }
-                                      
+                              
+                              
+        $rule_id = $this->request->getParam('rule_id');
+        if($rule_id)
+        {
+            $group_rule_id = $this->createSingleFilterFilterGroup(
+                'rule_id', $rule_id, 'eq');
+            $groups[]      = $group_rule_id;         
+        }
+                                              
         $page_size = (int) $this->request->getParam(self::PARAM_PAGE_SIZE);
         $page_size = $page_size ? $page_size : 100;                
         
