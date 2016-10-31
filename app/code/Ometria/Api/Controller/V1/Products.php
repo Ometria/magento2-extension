@@ -14,7 +14,7 @@ class Products extends Base
     protected $productCollection;
     protected $helperOmetriaApiFilter;
     protected $searchCriteria;
-    protected $dataObjectProcessor;            
+    protected $dataObjectProcessor;
     protected $storeManager;
     protected $metadataService;
     protected $searchCriteriaBuilder;
@@ -25,14 +25,14 @@ class Products extends Base
     protected $request;
     protected $directoryHelper;
     protected $storeUrlHelper;
-    
+
     protected $storeIdCache=false;
-        
+
     /**
     * Prevent twice joining visibility if its added as filter
-    */    
+    */
     protected $needsVisibilityJoin;
-    
+
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
@@ -40,19 +40,19 @@ class Products extends Base
 		\Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
 		\Magento\Catalog\Model\ResourceModel\Product\Attribute\CollectionFactory $attributesFactory,
 		\Ometria\Api\Helper\Category $helperCategory,
-		\Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,	
-		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,			
+		\Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,
+		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
 		\Magento\Catalog\Model\ResourceModel\Product\Collection $productCollection,
 		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor,
 		\Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
         \Magento\Catalog\Api\ProductAttributeRepositoryInterface $metadataServiceInterface,
-        \Magento\Catalog\Model\Product\Media\Config $catalogProductMediaConfig,        
+        \Magento\Catalog\Model\Product\Media\Config $catalogProductMediaConfig,
         \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Framework\App\ResourceConnection $resourceConnection,
         \Magento\Directory\Helper\Data $directoryHelper,
-        \Ometria\Api\Helper\StoreUrl $storeUrlHelper	                        
-        
+        \Ometria\Api\Helper\StoreUrl $storeUrlHelper
+
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -64,9 +64,9 @@ class Products extends Base
 		$this->helperCategory             = $helperCategory;
 		$this->response                   = $context->getResponse();
 		$this->productCollection          = $productCollection;
-		$this->helperOmetriaApiFilter     = $helperOmetriaApiFilter;	
-		$this->searchCriteria             = $searchCriteria;	
-		$this->dataObjectProcessor        = $dataObjectProcessor;	
+		$this->helperOmetriaApiFilter     = $helperOmetriaApiFilter;
+		$this->searchCriteria             = $searchCriteria;
+		$this->dataObjectProcessor        = $dataObjectProcessor;
 		$this->storeManager               = $storeManager;
 		$this->productFactory             = $productFactory;
 		$this->catalogProductMediaConfig  = $catalogProductMediaConfig;
@@ -74,29 +74,29 @@ class Products extends Base
 		$this->directoryHelper            = $directoryHelper;
 		$this->storeUrlHelper             = $storeUrlHelper;
 	}
-	
+
 	protected function getArrayKey($array, $key)
 	{
 	    return array_key_exists($key, $array) ? $array[$key] : null;
 	}
-	
+
 	protected function getCustomAttribute($array, $key)
 	{
 	    $attributes = $this->getArrayKey($array, 'custom_attributes');
 	    if(!$attributes) { return; }
-	    
+
 	    $item       = array_filter($attributes, function($item) use ($key){
 	        return $item['attribute_code'] === $key;
 	    });
 	    $item = array_shift($item);
-	    
+
 	    if($item)
 	    {
 	        return $item['value'];
 	    }
 	    return null;
 	}
-	
+
 	protected function getImageUrlKey()
 	{
 	    $key = $this->getRequest()->getParam('product_image');
@@ -106,7 +106,7 @@ class Products extends Base
 	    }
 	    return 'image';
 	}
-	
+
 	protected function getBaseImageUrl($store_id=false)
 	{
 	    $store = $this->storeManager->getStore();
@@ -115,48 +115,48 @@ class Products extends Base
     	    $store = $this->storeManager->getStore($store_id);
 	    }
         $baseUrl = 	$store->getBaseUrl(
-                \Magento\Framework\UrlInterface::URL_TYPE_MEDIA) . 
+                \Magento\Framework\UrlInterface::URL_TYPE_MEDIA) .
         $this->catalogProductMediaConfig->getBaseMediaPath();
-        return $baseUrl;                        
+        return $baseUrl;
 	}
-	
+
 	protected function serializeItem($item)
 	{
         $tmp = Helper::getBlankArray();
 
-        $tmp['id']          = $this->getArrayKey($item, 'id');
+        $tmp['id']          = strval($this->getArrayKey($item, 'id'));
         $tmp['title']       = $this->getArrayKey($item, 'name');
         $tmp['sku']         = $this->getArrayKey($item, 'sku');
-        $tmp['price']       = $this->getArrayKey($item, 'price');
-        $tmp['url']         = $this->getArrayKey($item, 'url');              
+        $tmp['url']         = $this->getArrayKey($item, 'url');
         $tmp['image_url']   = $this->getBaseImageUrl() . $this->getCustomAttribute($item,$this->getImageUrlKey());
         $tmp['attributes']  = [];
         $tmp['is_active']   = $this->getArrayKey($item, 'status') !== \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_DISABLED;
-        $tmp['stores']      = [$this->getArrayKey($item, 'store_ids')];	
-        
-        if($item['type_id'] === 'configurable' && $item['price'] == 0)
-        {   
-            $product = $this->productRepository->getById($item['id']);            
-            $price   = $product->getPriceInfo()->getPrice(
-                \Magento\Catalog\Pricing\Price\FinalPrice::PRICE_CODE
-                )->getValue();
-            $tmp['price'] = $price;
+        $tmp['stores']      = $this->getArrayKey($item, 'store_ids');
+
+        if($this->_request->getParam('raw') === 'true') {
+            $tmp['_raw'] = $item;
         }
-        
+
+        $tmp = $this->appendPricing($tmp['id'], $tmp);
+
+        if (isset($item['store_listings'])) {
+            $tmp['store_listings'] = $item['store_listings'];
+        }
+
         //add attributes
-        $attributes = $this->getArrayKey($item, 'custom_attributes');        
+        $attributes = $this->getArrayKey($item, 'custom_attributes');
         $attributes = $attributes ? $attributes : [];
         foreach($attributes as $attribute)
         {
             $full_attribute       = $this->attributesFactory->create()
                 ->addFieldToFilter('attribute_code', $attribute['attribute_code'])
-                ->getFirstItem();        
+                ->getFirstItem();
 
             $key = 'value';
             if(in_array($full_attribute->getFrontendInput(),['select', 'multiselect']))
             {
                 $key = 'id';
-            } 
+            }
             $tmp['attributes'][] = [
                 'type' =>$attribute['attribute_code'],
                 $key   =>$attribute['value'],
@@ -170,21 +170,21 @@ class Products extends Base
         foreach($categories_as_attributes as $category)
         {
             $tmp['attributes'][] = $category;
-        }                
+        }
         return $tmp;
 	}
-	
+
 	protected function getItemsForJson()
 	{
         $searchCriteria = $this->helperOmetriaApiFilter
             ->applyFilertsToSearchCriteria($this->searchCriteria);
         $this->setCurrentStoreIfStoreIdFilterExists($searchCriteria);
-        
+
         $collection = $this->productCollection;
-        foreach ($this->metadataService->getList($this->searchCriteriaBuilder->create())->getItems() as $metadata) {         
+        foreach ($this->metadataService->getList($this->searchCriteriaBuilder->create())->getItems() as $metadata) {
             $collection->addAttributeToSelect($metadata->getAttributeCode());
-        }                   
-        
+        }
+
         foreach ($searchCriteria->getFilterGroups() as $group) {
             $this->addFilterGroupToCollection($group, $collection);
         }
@@ -192,40 +192,47 @@ class Products extends Base
         $page_size = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
         $page_size = $page_size ? $page_size : 100;
         $collection->setPageSize($page_size);
-        
+
         $current_page = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
         $current_page = $current_page ? $current_page : 1;
         $collection->setCurPage($current_page);
-        
+
+        if ($this->getRequest()->getParam('product_store')){
+            $collection->setStoreId($this->getRequest()->getParam('product_store'));
+        }
+
         $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
-        
+
         if($this->needsVisibilityJoin)
         {
             $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
         }
-        
+
         $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
-                     
-        $items      = array_map(function($item){
-            return $this->serializeItem($item);                
-        }, $items);
-        
-        $items = array_values($items);	
-        return $items;
-	}
-	
-    public function execute()
-    {          
-        $items  = $this->getItemsForJson();        
+
         if($this->_request->getParam('listing') === 'true')
         {
-            $items       = $this->addStoreListingToItems($items,        
-                $this->resourceConnection);             
-        }                
+            try {
+                $items = $this->addStoreListingToItems($items, $this->resourceConnection);
+            } catch (\Exception $e){
+                // pass
+            }
+        }
+        $items      = array_map(function($item){
+            return $this->serializeItem($item);
+        }, $items);
+
+        $items = array_values($items);
+        return $items;
+	}
+
+    public function execute()
+    {
+        $items  = $this->getItemsForJson();
         $result = $this->resultJsonFactory->create();
         return $result->setData($items);
-    }  
-    
+    }
+
     protected function setCurrentStoreIfStoreIdFilterExists($searchCriteria)
     {
         foreach ($searchCriteria->getFilterGroups() as $filterGroup) {
@@ -236,16 +243,16 @@ class Products extends Base
                     {
                         $this->storeManager->setCurrentStore(
                             $this->storeManager->getStore($store_id)
-                        );                        
+                        );
                         return;
-                    }                 
+                    }
                 }
             }
-        }    
+        }
     }
     /**
     * Repository interface does not support store or website filtering
-    */    
+    */
     protected function addFilterGroupToCollection(
         \Magento\Framework\Api\Search\FilterGroup $filterGroup,
         \Magento\Catalog\Model\ResourceModel\Product\Collection $collection
@@ -258,7 +265,7 @@ class Products extends Base
                 {
                     $store = $this->storeManager->getStore($store_id);
                     $collection->addStoreFilter($store);
-                }                
+                }
                 continue;
             }
 
@@ -268,17 +275,17 @@ class Products extends Base
                 {
                     $website = $this->storeManager->getWebsite($website_id);
                     $collection->addWebsiteFilter($website);
-                }                
+                }
                 continue;
             }
-            
+
             if($filter->getField() === 'visibility')
             {
                 $this->needsVisibilityJoin = false;
                 $collection->addFieldToFilter('visibility', ['in'=>$filter->getValue()]);
                 continue;
             }
-            
+
             $condition = $filter->getConditionType() ? $filter->getConditionType() : 'eq';
             $fields[] = ['attribute' => $filter->getField(), $condition => $filter->getValue()];
         }
@@ -291,215 +298,144 @@ class Products extends Base
             unset($fields[0]['attribute']);
             $filter = $fields[0];
             $collection->addFieldToFilter($attribute, $filter);
-        }        
-    }        
-    
-    
-    protected function getIdsAndCastAsIntFromItems($items)
-    {
-        $product_ids = array_map(function($item){
-            return (int) $item['id'];
-        }, $items);
-        $ids = implode(',', $product_ids);
-        return $ids;    
-    }
-    
-    protected function queryForStoreListingData($resourceConnection, $items)
-    {
-        //can't bind IN with PDO -- fetching IDs, casting as 
-        //ints, and concating with "," on our own.  Int cast
-        //performs safe SQL escaping
-        $ids            = $this->getIdsAndCastAsIntFromItems($items);                        
-        $db  = $resourceConnection->getConnection();        
-        $sql = '
-            SELECT eav_attribute.attribute_code, main_table.value_id, main_table.attribute_id, main_table.store_id, main_table.entity_id, value 
-            FROM catalog_product_entity_datetime main_table  
-            LEFT JOIN eav_attribute ON eav_attribute.attribute_id = main_table.attribute_id
-            WHERE entity_id IN ('.$ids.')        
-            UNION
-        
-            SELECT eav_attribute.attribute_code, main_table.value_id, main_table.attribute_id, main_table.store_id, main_table.entity_id, value 
-            FROM catalog_product_entity_decimal main_table  
-            LEFT JOIN eav_attribute ON eav_attribute.attribute_id = main_table.attribute_id
-            WHERE entity_id IN ('.$ids.')        
-            UNION
-        
-            SELECT eav_attribute.attribute_code, main_table.value_id, main_table.attribute_id, main_table.store_id, main_table.entity_id, value 
-            FROM catalog_product_entity_int main_table  
-            LEFT JOIN eav_attribute ON eav_attribute.attribute_id = main_table.attribute_id
-            WHERE entity_id IN ('.$ids.')            
-            UNION
-        
-            SELECT eav_attribute.attribute_code, main_table.value_id, main_table.attribute_id, main_table.store_id, main_table.entity_id, value 
-            FROM catalog_product_entity_text main_table  
-            LEFT JOIN eav_attribute ON eav_attribute.attribute_id = main_table.attribute_id
-            WHERE entity_id IN ('.$ids.')             
-            UNION
-        
-            SELECT eav_attribute.attribute_code, main_table.value_id, main_table.attribute_id, main_table.store_id, main_table.entity_id, value 
-            FROM catalog_product_entity_varchar main_table  
-            LEFT JOIN eav_attribute ON eav_attribute.attribute_id = main_table.attribute_id
-            WHERE entity_id IN ('.$ids.')            
-        ';
-
-        $result = $db->query($sql);
-        return $result;    
-    }
-    
-    protected function getStoreListingsFromResults($results)
-    {
-        $store_listings = [];
-        while($row = $results->fetch())
-        {
-            if(!isset($store_listings[$row['entity_id']])){ 
-                $store_listings[$row['entity_id']] = [];
-            }
-            if(!isset($store_listings[$row['entity_id']][$row['store_id']]))
-            {
-                $store_listings[$row['entity_id']][$row['store_id']] = [];
-            }
-            $store_listings[$row['entity_id']][$row['store_id']][
-                $row['attribute_code']
-            ] = $row['value'];
         }
-        return $store_listings;    
-    }
-    
-    protected function addStoreListingToItems($items, $resourceConnection)
-    {
-        $result         = $this->queryForStoreListingData($resourceConnection, $items);
-        $store_listings = $this->getStoreListingsFromResults($result);
-        
-        foreach($items as $key=>$item)
-        {
-            $product_id = $item['id'];
-            if(!isset($store_listings[$product_id])) { continue; }
-            $items[$key]['store_listing'] = 
-                $this->normalizeStoreListing($store_listings[$product_id], $product_id, $item['stores'][0]);                
-        }     
-        
-        return $items;    
-    }
-    
-    protected function getStores()
-    {
-        return $this->storeManager->getStores();
-    }
-    
-    protected function getStoreIds()
-    {
-        if(!$this->storeIdCache)
-        {
-            $stores = $this->getStores();
-            $this->storeIdCache = array_map(function($store){
-                return $store->getId();
-            }, $stores);
-        }
-    
-        return $this->storeIdCache;
-    }
-    
-    protected function getStoreListingKeysToKeep()
-    {
-        return ['name','price','status','visibility','store_id','url',
-            'image_url','thumbnail_url','small_image_url','store_currency',
-            'store_price'];         
-    }
-    
-    protected function addImageUrlsToListing($listing, $url_base)
-    {        
-        foreach(['thumbnail', 'image', 'small_image'] as $image_type)
-        {
-            if(!isset($listing[$image_type]) || !$listing[$image_type])
-            {
-                $listing[$image_type . '_url'] = null;
-                continue;
-            }
-            $listing[$image_type . '_url'] = $url_base . $listing['thumbnail'];
-        }    
-        return $listing;
-    }
-    
-    protected function addStorePriceInformationToListing($listing, $store)
-    {
-        if(isset($listing['price']))
-        {
-            $listing['store_price'] = $this->directoryHelper->currencyConvert(
-                $listing['price'], 
-                $store->getBaseCurrency()->getCode(),
-                $store->getCurrentCurrency()->getCode()
-            );
-        }
-        return $listing;    
     }
 
-    protected function addSpecialPriceInformationToListing($listing, $store)
-    {
-        if(isset($listing['special_price']))
-        {
-            $listing['store_special_price'] = $this->directoryHelper->currencyConvert(
-                $listing['special_price'], 
-                $store->getBaseCurrency()->getCode(),
-                $store->getCurrentCurrency()->getCode()
-            );
-        }   
-        return $listing;    
-    }
-        
-    protected function addCurrencyAndPriceInformationToListing($listing, $store)
-    {
-        $listing['store_currency']  = $store->getCurrentCurrency()->getCode();                    
-        $listing                    = $this->addStorePriceInformationToListing($listing, $store);    
-        $listing                    = $this->addSpecialPriceInformationToListing($listing, $store);
-        return $listing;         
-    }
-    
-    protected function removeUnneededKeysFromListing($listing)
-    {
-        $to_keep = $this->getStoreListingKeysToKeep();    
-        foreach($listing as $key=>$value)
-        {
-            if(in_array($key, $to_keep)){ continue; }
-            unset($listing[$key]);
-        }    
-        return $listing;
-    }
-    
-    protected function initilizeListingForStore($store_listing, $store)
-    {
-        $store_id        = $store->getId();
-        $listing             = $store_listing[0];
-        if(array_key_exists($store_id, $store_listing))
-        {
-            $listing = $store_listing[$store_id];
-        }            
-        $listing['store_id']        = $store->getId();                            
-        return $listing;
-    }
-    
-    protected function generateProductUrlForListing($listing, $product_id, $store)
-    {
-        $listing['url'] = $this->storeUrlHelper
-            ->getStoreUrlByProductIdAndStoreId($product_id, $store->getId());    
-        return $listing;
-    }
-    
-    protected function normalizeStoreListing($store_listing, $product_id, $real_store_ids)
-    {           
-        foreach($this->getStores() as $store)
-        {    
-            if(!in_array($store->getId(), $real_store_ids))
-            {
-                continue;
-            }      
-            $listing = $this->initilizeListingForStore($store_listing, $store);            
-            $listing = $this->addImageUrlsToListing($listing, $this->getBaseImageUrl($listing['store_id']));            
-            $listing = $this->addCurrencyAndPriceInformationToListing($listing, $store);
-            $listing = $this->generateProductUrlForListing($listing, $product_id, $store);
-            $listing = $this->removeUnneededKeysFromListing($listing);     
-            $listings[]  = $listing;
+    protected function addStoreListingToItems(
+        $items
+    ){
+        $stores = $this->storeManager->getStores();
+        $store_id_lookup = array();
+        foreach($stores as $store){
+            $id = $store->getId();
+            $store_id_lookup[$id] = $store;
         }
-        return $listings;
-    }    
-    
+
+        $all_store_ids = array();
+        $all_product_ids = array();
+        foreach($items as &$item){
+            $all_product_ids[] = $item['id'];
+            foreach($item['store_ids'] as $store_id){
+                $all_store_ids[$store_id] = $store_id;
+            }
+        }
+
+
+        $store_listings = array();
+        foreach($all_store_ids as $store_id){
+            $store = $store_id_lookup[$store_id];
+            $store_listings = $this->getProductListingsForStore($store, $all_product_ids, $store_listings);
+        }
+
+        $ret = array();
+        foreach($items  as $item){
+            $id = $item['id'];
+            $item['store_listings'] = isset($store_listings[$id]) ? array_values($store_listings[$id]) : array();
+            $ret[] = $item;
+        }
+
+        return $ret;
+    }
+
+
+    protected function getProductListingsForStore(
+        $store,
+        $productIds,
+        $store_listings
+    ){
+        $storeId = $store->getId();
+
+        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        $collectionFactory = $objectManager->create('Magento\Catalog\Model\ResourceModel\Product\CollectionFactory');
+        $collection = $collectionFactory
+                ->create()
+                ->addAttributeToSelect('*')
+                ->setStoreId($storeId)
+                ->addAttributeToFilter('entity_id', array('in' => $productIds));
+
+        $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
+
+        $base_currency = $store->getBaseCurrency()->getCode();
+        $store_currency = $store->getDefaultCurrency()->getCode();
+
+        foreach($items as $item){
+            $id = $item['id'];
+
+            $tmp = array(
+                'store_id' => $storeId,
+                'title' => $item['name'],
+                'url' => $item['url'],
+                'store_currency' => $store_currency,
+                'visibility' => $item['visibility'],
+                'status' => $item['status'],
+                'image_url' => $this->getBaseImageUrl() . $this->getCustomAttribute($item,$this->getImageUrlKey())
+                );
+
+            $tmp = $this->appendPricing($id, $tmp, $store_currency, $base_currency);
+
+            $store_listings[$id][$storeId] = $tmp;
+        }
+
+        return $store_listings;
+    }
+
+    protected function appendPricing($product_id, $item, $store_currency=null, $base_currency=null){
+
+        $store_price = $this->getProductPrice(
+            $product_id,
+            $item,
+            \Magento\Catalog\Pricing\Price\RegularPrice::PRICE_CODE,
+            $store_currency,
+            $base_currency);
+
+        $store_special_price = $this->getProductPrice(
+            $product_id,
+            $item,
+            \Magento\Catalog\Pricing\Price\SpecialPrice::PRICE_CODE,
+            $store_currency,
+            $base_currency);
+
+        $item['price'] = $store_price;
+
+        if($this->_request->getParam('final_price') === 'true') {
+            $store_final_price = $this->getProductPrice(
+                $product_id,
+                $item,
+                \Magento\Catalog\Pricing\Price\FinalPrice::PRICE_CODE,
+                $store_currency,
+                $base_currency);
+
+            $item['final_price'] = $store_final_price;
+        }
+
+        if ($store_special_price) {
+            $item['special_price'] = $store_special_price;
+            //$item['special_price_dt_from'] = null;
+            //$item['special_price_dt_to'] = null;
+        }
+
+        return $item;
+    }
+
+
+    protected function getProductPrice(
+        $product_id,
+        $item,
+        $price_code,
+        $store_currency=null,
+        $base_currency=null
+    ){
+        $product = $this->productRepository->getById($product_id);
+        $price   = $product->getPriceInfo()->getPrice($price_code)->getValue();
+
+        if ($store_currency && $base_currency){
+            $price = $this->directoryHelper->currencyConvert(
+                $price,
+                $base_currency,
+                $store_currency
+                );
+        }
+
+        return $price;
+    }
 }
