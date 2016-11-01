@@ -361,10 +361,12 @@ class Products extends Base
         foreach($items as $item){
             $id = $item['id'];
 
+            $url = $this->storeUrlHelper->getStoreUrlByProductIdAndStoreId($id, $storeId);
+
             $tmp = array(
                 'store_id' => $storeId,
                 'title' => $item['name'],
-                'url' => $item['url'],
+                'url' => $url,
                 'store_currency' => $store_currency,
                 'visibility' => $item['visibility'],
                 'status' => $item['status'],
