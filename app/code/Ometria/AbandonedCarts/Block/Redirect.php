@@ -7,16 +7,14 @@ class Redirect extends \Magento\Framework\View\Element\Template
     protected $salesModelQuote;
     protected $scopeConfig;
     public function __construct(
-        \Magento\Framework\View\Element\Template\Context $context, 
-        \Magento\Framework\App\RequestInterface $request,  
-        \Magento\Quote\Model\Quote $salesModelQuote,   
-        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,           
+        \Magento\Framework\View\Element\Template\Context $context,
+        \Magento\Quote\Model\Quote $salesModelQuote,         
         array $data = []
     )
     {    
-        $this->request = $request;
+        $this->request = $context->getRequest();
+        $this->scopeConfig = $context->getScopeConfig();
         $this->salesModelQuote = $salesModelQuote;
-        $this->scopeConfig = $scopeConfig;
         return parent::__construct($context, $data);
     }
     
