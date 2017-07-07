@@ -13,14 +13,14 @@
     "require": {},
     "autoload": {
         "files": [
-            "app/code/Ometria/AbandonedCarts/registration.php",
-            "app/code/Ometria/Api/registration.php",
-            "app/code/Ometria/Core/registration.php"
+            "/Users/srinivas/projects/demo/app/code/Ometria/AbandonedCarts/registration.php",
+            "/Users/srinivas/projects/demo/app/code/Ometria/Api/registration.php",
+            "/Users/srinivas/projects/demo/app/code/Ometria/Core/registration.php"
         ],
         "psr-4": {
-            "Ometria\\AbandonedCarts\\": "app/code/Ometria/AbandonedCarts",
-            "Ometria\\Api\\": "app/code/Ometria/Api",
-            "Ometria\\Core\\": "app/code/Ometria/Core"
+            "Ometria\\AbandonedCarts\\": "/Users/srinivas/projects/demo/app/code/Ometria/AbandonedCarts",
+            "Ometria\\Api\\": "/Users/srinivas/projects/demo/app/code/Ometria/Api",
+            "Ometria\\Core\\": "/Users/srinivas/projects/demo/app/code/Ometria/Core"
         }
     }
 }
