@@ -1,6 +1,6 @@
 {
     "name": "ometria/magento2",
-    "type": "magento2-module",
+    "type": "magento2-component",
     "version": "1.3.2",
     "description": "Dev composer package for Ometria Extension",
     "authors": [
