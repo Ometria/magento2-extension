@@ -124,11 +124,13 @@ class Products extends Base
 	{
         $tmp = Helper::getBlankArray();
 
+        $image_path = $this->getCustomAttribute($item,$this->getImageUrlKey());
+
         $tmp['id']          = strval($this->getArrayKey($item, 'id'));
         $tmp['title']       = $this->getArrayKey($item, 'name');
         $tmp['sku']         = $this->getArrayKey($item, 'sku');
         $tmp['url']         = $this->getArrayKey($item, 'url');
-        $tmp['image_url']   = $this->getBaseImageUrl() . $this->getCustomAttribute($item,$this->getImageUrlKey());
+        $tmp['image_url']   = $image_path ? $this->getBaseImageUrl() . $image_path : null;
         $tmp['attributes']  = [];
         $tmp['is_active']   = $this->getArrayKey($item, 'status') !== \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_DISABLED;
         $tmp['stores']      = $this->getArrayKey($item, 'store_ids');
