@@ -12,7 +12,7 @@ class Customers extends Base
     protected $subscriberCollection;
     protected $customerIdsOfNewsLetterSubscribers=[];
     protected $customerDataHelper;
-    
+
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
@@ -29,14 +29,14 @@ class Customers extends Base
 		$this->subscriberCollection         = $subscriberCollection;
 		$this->customerMetadataInterface    = $customerMetadataInterface;
 		$this->customerDataHelper           = $customerDataHelper;
-		
+
 		$this->genderOptions                = $this->customerMetadataInterface
             ->getAttributeMetadata('gender')
             ->getOptions();
 	}
-	
+
 	public function getMarketingOption($item, $subscriber_collection)
-	{	        
+	{
 	    if(!array_key_exists('id', $item))
 	    {
 	        return false;
@@ -45,12 +45,12 @@ class Customers extends Base
 	    {
 	        foreach($subscriber_collection as $subscriber)
 	        {
-	            $this->customerIdsOfNewsLetterSubscribers[] = 
+	            $this->customerIdsOfNewsLetterSubscribers[] =
 	                $subscriber->getCustomerId();
 	        }
-	    }	
+	    }
 
-	    return in_array($item['id'], $this->customerIdsOfNewsLetterSubscribers);	    
+	    return in_array($item['id'], $this->customerIdsOfNewsLetterSubscribers);
 	}
 
 	public function getSubscriberCollectionFromCustomerIds($customer_ids)
@@ -58,31 +58,31 @@ class Customers extends Base
 	    return $this->subscriberCollection
 	        ->addFieldToFilter('customer_id', ['in'=>$customer_ids])
 	        ->addFieldToFilter('subscriber_status',
-	            \Magento\Newsletter\Model\Subscriber::STATUS_SUBSCRIBED);	        	
+	            \Magento\Newsletter\Model\Subscriber::STATUS_SUBSCRIBED);
 	}
-	
+
 	public function getSubscriberCollection($items)
 	{
 	    $customer_ids = array_map(function($item){
 	        return $item['id'];
 	    },$items);
-	    
+
 	    return $this->getSubscriberCollectionFromCustomerIds($customer_ids);
 	}
-			
+
     public function execute()
     {
         $items = $this->apiHelperServiceFilterable->createResponse(
-            $this->repository,             
+            $this->repository,
             '\Magento\Customer\Api\Data\CustomerInterface'
         );
-                
+
         $subscriber_collection = $this->getSubscriberCollection($items);
-        
+
         $items = array_map(function($item) use ($subscriber_collection) {
 
             $new = Helper::getBlankArray();
-            
+
             $new["@type"]             = "contact";
             $new["id"]                = array_key_exists('id', $item) ? $item['id'] : '';
             $new["email"]             = array_key_exists('email', $item) ? $item['email'] : '';
@@ -93,12 +93,12 @@ class Customers extends Base
             $new["gender"]            = $this->customerDataHelper->getGenderLabel($item);
             $new["date_of_birth"]     = array_key_exists('dob', $item) ? $item['dob'] : '';
             $new["marketing_optin"]   = $this->getMarketingOption($item, $subscriber_collection);
-            $new["country_id"]        = $this->customerDataHelper->getCountryId($item);    
-            $new["store_id"]          = $item['store_id'];
+            $new["country_id"]        = $this->customerDataHelper->getCountryId($item);
+            $new["store_id"]          = array_key_exists('store_id', $item) ? $item['store_id'] : null;
             return $new;
         }, $items);
-        
+
 		$result = $this->resultJsonFactory->create();
 		return $result->setData($items);
-    }    
+    }
 }
