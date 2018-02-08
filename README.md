@@ -74,4 +74,4 @@ Once a module is enabled, the rest of Magento can "see" it. The last command tel
 
     php bin/magento setup:upgrade
 
-**Important:** Changing a Magento system running in production is **not** a recommended practice.  Depending on your system software, or other running extensions, running `setup:upgrade` may trigger undesired behaviors.  As will installing **any** new software on your system, don't forget to take appropriate backup steps, and to test your new module in a development or staging enviornment before deploying to production.
+**Important:** Changing a Magento system running in production is **not** a recommended practice.  Depending on your system software, or other running extensions, running `setup:upgrade` may trigger undesired behaviors.  As will installing **any** new software on your system, don't forget to take appropriate backup steps, and to test your new module in a development or staging environment before deploying to production.
