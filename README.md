@@ -10,6 +10,12 @@ Installing the extension is a X step process
 3. Update your project's composer dependencies
 4. Install the downloaded package via Magento's standard command line tool
 
+Support
+-------
+
+If you have concerns or questions, please send an email to support@ometria.com
+with all relevant details that are needed to investigate or resolve an issue.
+
 Quick Start
 --------------------------------------------------
 After backing up your composer.json file

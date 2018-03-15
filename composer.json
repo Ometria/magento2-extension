@@ -5,8 +5,8 @@
     "description": "Dev composer package for Ometria Extension",
     "authors": [
         {
-            "name": "Alastair James",
-            "email": "al.james@gmail.com"
+            "name": "Ometria",
+            "email": "support@ometria.com"
         }
     ],
     "minimum-stability": "beta",
