@@ -135,6 +135,12 @@ class Products extends Base
         $tmp['is_active']   = $this->getArrayKey($item, 'status') !== \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_DISABLED;
         $tmp['stores']      = $this->getArrayKey($item, 'store_ids');
 
+        // Add parent ID if this is a configurable variant simple product
+        if ($this->getArrayKey($item, 'parent_id') !== null) {
+            $tmp['parent_id'] = $this->getArrayKey($item, 'parent_id');
+            $tmp['is_variant'] = true;
+        }
+
         if($this->_request->getParam('raw') === 'true') {
             $tmp['_raw'] = $item;
         }
@@ -210,6 +216,8 @@ class Products extends Base
             $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
         }
 
+        $this->addProductParentIdToCollection($collection);
+
         $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
 
         if($this->_request->getParam('listing') === 'true')
@@ -227,6 +235,33 @@ class Products extends Base
         $items = array_values($items);
         return $items;
 	}
+
+    /**
+     * Join on configurable product relationship table to
+     * retrieve parent ID of configurable variant simple products.
+     *
+     * Where a simple has multiple parents defined only the most
+     * recent parent association will be returned in the results.
+     *
+     * @param $collection
+     */
+    private function addProductParentIdToCollection($collection)
+    {
+        $collection->joinField(
+            'parent_id',
+            'catalog_product_super_link',
+            'parent_id',
+            'product_id=entity_id',
+            null,
+            'left'
+        );
+
+        /*
+         * Group by product entity_id to prevent duplicate rows
+         * if simples have been assigned to multiple configurables
+         */
+        $collection->getSelect()->group('e.entity_id');
+    }
 
     public function execute()
     {
