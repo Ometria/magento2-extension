@@ -1,7 +1,13 @@
 <?php
 namespace Ometria\AbandonedCarts\Controller\Cartlink;
+
+use Psr\Log\LoggerInterface;
+
 class Index extends \Magento\Framework\App\Action\Action
 {
+    const CART_LINK_QUOTE_INVALID = 'Cart link is incorrect or expired';
+    const CART_LINK_TOKEN_INVALID = 'Deeplink is incorrect or expired';
+
     protected $customerModelSession;
     protected $abandonedCartsHelperConfig;
     protected $controllerResultRedirectFactory;
@@ -10,19 +16,21 @@ class Index extends \Magento\Framework\App\Action\Action
     protected $checkoutSession;
     protected $session;
     protected $cookieHelper;
-    
+
+    /** @var LoggerInterface */
+    protected $logger;
+
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
         \Magento\Customer\Model\Session $customerModelSession, 
         \Magento\Checkout\Model\Session $checkoutSession,        
-        \Ometria\AbandonedCarts\Helper\Config $abandonedCartsHelperConfig, 
-//         \Magento\Framework\Controller\Result\RedirectFactory $controllerResultRedirectFactory, 
+        \Ometria\AbandonedCarts\Helper\Config $abandonedCartsHelperConfig,
         \Magento\Quote\Model\Quote $salesModelQuote,
-//         \Magento\Framework\Message\ManagerInterface $messageManager,
         \Magento\Checkout\Model\Cart $cart,
         \Magento\Framework\Session\SessionManagerInterface $session,
         \Magento\Customer\Model\Visitor $visitor, 
-        \Magento\Framework\Stdlib\CookieManagerInterface $cookieHelper     
+        \Magento\Framework\Stdlib\CookieManagerInterface $cookieHelper,
+        LoggerInterface $logger
     )
     {
         $this->visitor                          = $visitor;
@@ -34,13 +42,14 @@ class Index extends \Magento\Framework\App\Action\Action
         $this->salesModelQuote                  = $salesModelQuote;
         $this->checkoutSession                  = $checkoutSession;
         $this->cart                             = $cart;
-        $this->cookieHelper                     = $cookieHelper;        
+        $this->cookieHelper                     = $cookieHelper;
+        $this->logger                           = $logger;
+
         return parent::__construct($context);
     }
     
     public function execute()
     {
-        $message_incorrect_link = 'Cart link is incorrect or expired';
         $session = $this->customerModelSession;
         $helper  = $this->abandonedCartsHelperConfig;
         
@@ -61,7 +70,7 @@ class Index extends \Magento\Framework\App\Action\Action
             $quote = $this->salesModelQuote->load($id);
             if (!$quote || !$quote->getId())
             {
-                $this->messageManager->addNotice($message_incorrect_link);
+                $this->messageManager->addNotice(self::CART_LINK_QUOTE_INVALID);
                 return $this->resultFactory->create(
                     \Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT
                     )->setUrl('/');
@@ -72,7 +81,18 @@ class Index extends \Magento\Framework\App\Action\Action
                 $computed_token = substr(md5($quote->getCreatedAt().$quote->getId()), 0, 12);
                 if ($token!=$computed_token) 
                 {
-                    $this->messageManager->addNotice($message_incorrect_link);
+                    // Log any token mismatches
+                    $this->logger->warning(
+                        self::CART_LINK_TOKEN_INVALID,
+                        [
+                            'token' => $computed_token,
+                            'quote' => [
+                                'id' => $quote->getId(),
+                                'created_at' => $quote->getCreatedAt()
+                            ]
+                        ]);
+
+                    $this->messageManager->addNotice(self::CART_LINK_TOKEN_INVALID);
                     return $this->resultFactory->create(
                         \Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT
                         )->setUrl('/');
@@ -86,15 +106,10 @@ class Index extends \Magento\Framework\App\Action\Action
             $data['quote_id'] = $quote->getId();
             $this->session->setVisitorData($data);
             $this->visitor->setData($data)->save();
-            // $this->cookieHelper->deleteCookie('mage-cache-sessid');
-            
-            $cart_path = $helper->getCartUrl();
                                       
             return $this->resultFactory->create(
-                \Magento\Framework\Controller\ResultFactory::TYPE_PAGE);                                                
-            // return $this->resultFactory->create(
-            //     \Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT
-            //     )->setUrl($cart_path);                
+                \Magento\Framework\Controller\ResultFactory::TYPE_PAGE
+            );
         } 
         else 
         {

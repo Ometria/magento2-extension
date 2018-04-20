@@ -1,56 +1,135 @@
 <?php
 namespace Ometria\AbandonedCarts\Block;
-use stdClass;
-class Redirect extends \Magento\Framework\View\Element\Template
+
+use Magento\Framework\View\Element\Template;
+use Magento\Framework\View\Element\Template\Context;
+use Magento\Quote\Model\Quote as QuoteModel;
+use Magento\Quote\Api\Data\CartInterface;
+use Magento\Framework\Session\SessionManagerInterface as Session;
+use Magento\Framework\Exception\NoSuchEntityException;
+use Ometria\AbandonedCarts\Helper\Config as ConfigHelper;
+
+class Redirect extends Template
 {
-    protected $request;
-    protected $salesModelQuote;
-    protected $scopeConfig;
+    const CART_NOT_FOUND_MSG = 'Cart link is incorrect or expired';
+
+    /** @var ConfigHelper */
+    private $configHelper;
+
+    /** @var QuoteModel */
+    private $quoteModel;
+
+    /** @var Session */
+    private $session;
+
+    /**
+     * @param Context $context
+     * @param ConfigHelper $configHelper
+     * @param QuoteModel $quoteModel
+     * @param Session $session
+     * @param array $data
+     */
     public function __construct(
-        \Magento\Framework\View\Element\Template\Context $context,
-        \Magento\Quote\Model\Quote $salesModelQuote,         
+        Context $context,
+        ConfigHelper $configHelper,
+        QuoteModel $quoteModel,
+        Session $session,
         array $data = []
-    )
-    {    
-        $this->request = $context->getRequest();
-        $this->scopeConfig = $context->getScopeConfig();
-        $this->salesModelQuote = $salesModelQuote;
-        return parent::__construct($context, $data);
+    ) {
+        $this->configHelper = $configHelper;
+        $this->quoteModel = $quoteModel;
+        $this->session = $session;
+
+        parent::__construct($context, $data);
     }
-    
-    protected function getQuoteIdFromRequest()
+
+    /**
+     * @return mixed
+     */
+    public function getCookieLifeTime()
     {
-        $quote_id   = $this->_request->getParam('id');
-        $quote      = $this->salesModelQuote->load($quote_id);
+        return $this->configHelper->getCookieLifeTime();
     }
-    
-    protected function getUrlModelParams($quote_id)
+
+    /**
+     * @return string
+     */
+    public function getRedirectUrl()
     {
-        $quote_id   = $quote_id ? $quote_id : $this->getQuoteIdFromRequest();
-        $quote      = $this->salesModelQuote->load($quote_id);
-        $params     = [];
-        if($quote->getStoreId())
-        {
-            $params = ['_scope'=>$quote->getStoreId()];
+        $params = [];
+
+        $currentStore = $this->_storeManager->getStore();
+        $quoteStore = $this->getStoreFromQuote();
+
+        if ($currentStore->getId() != $quoteStore->getId()) {
+            $params['_query']['___store'] = $quoteStore->getCode();
+            $params['_query']['___from_store'] = $currentStore->getCode();
         }
-        return $params;    
+
+        return $this->_urlBuilder->getUrl(
+            $this->getRedirectPath(),
+            $params
+        );
     }
-    
-    protected function getCheckoutUrl()
+
+    /**
+     * @return string
+     */
+    private function getRedirectPath()
     {
-        $path = $this->scopeConfig->getValue('ometria_abandonedcarts/abandonedcarts/cartpath');
-        $path = $path ? $path : 'checkout/cart';
-        $path = trim($path, '/');
-        return $path;
+        $redirectPath = $this->configHelper->getCartPath();
+
+        if (!isset($redirectPath)) {
+            $redirectPath = 'checkout/cart';
+        }
+
+        return ltrim($redirectPath, '/');
     }
-    
-    public function getJsonCheckoutData($quote_id=null)
+
+    /**
+     * @return array
+     */
+    private function getStoreFromQuote()
     {
-        $o = new stdClass;
-        $params = $this->getUrlModelParams($quote_id);    
-        $o->url = $this->_urlBuilder->getBaseUrl($params) . 
-            $this->getCheckoutUrl();
-        
-        return json_encode($o);
+        $quote = $this->getQuoteFromSession();
+
+        if ($quote !== false && $quote->getStoreId()) {
+            return $this->_storeManager->getStore($quote->getStoreId());
+        }
+
+        /**
+         * If for any reason the quote was not found or storeId is not
+         * set on it, the current store context will be used for the redirect.
+         */
+        return $this->_storeManager->getStore();
+    }
+
+    /**
+     * @return bool|QuoteModel
+     * @throws NoSuchEntityException
+     */
+    private function getQuoteFromSession()
+    {
+        $data = $this->session->getVisitorData();
+
+        /**
+         * This should never happen as the controller would catch
+         * the condition but just incase, return false here to
+         * allow the block to still render.
+         */
+        if (!isset($data['quote_id'])) {
+            return false;
+        }
+
+        /**
+         * Using the quote model rather than repository here is not ideal
+         * however during loading of a quote using the repository, its storeId
+         * is hard coded to the current store context.
+         *
+         * @see \Magento\Quote\Model\QuoteRepository::loadQuote()
+         */
+        $quote = $this->quoteModel->loadByIdWithoutStore($data['quote_id']);
+
+        return $quote;
     }
 }
