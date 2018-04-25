@@ -68,7 +68,7 @@ class Index extends \Magento\Framework\App\Action\Action
         if ($id && $token)
         {
             $quote = $this->salesModelQuote->load($id);
-            if (!$quote || !$quote->getId())
+            if (!$quote || !$quote->getId() || !$quote->getIsActive())
             {
                 $this->messageManager->addNotice(self::CART_LINK_QUOTE_INVALID);
                 return $this->resultFactory->create(
@@ -98,9 +98,7 @@ class Index extends \Magento\Framework\App\Action\Action
                         )->setUrl('/');
                 }
             }
-            
-            $quote->setIsActive(true);
-            $quote->save();
+
             $this->checkoutSession->setQuoteId($quote->getId());           
             $data = $this->session->getVisitorData();
             $data['quote_id'] = $quote->getId();
