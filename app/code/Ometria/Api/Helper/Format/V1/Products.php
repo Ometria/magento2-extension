@@ -12,9 +12,11 @@ class Products
             "price"=>null,
             "url"=>null,
             "image_url"=>null,
+            "is_variant"=>false,
+            "parent_id"=>null,
             "attributes"=>null,
             "is_active"=>null,
-            "stores"=>null,            
+            "stores"=>null,
         ];
     }
 }

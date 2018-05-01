@@ -35,7 +35,8 @@ class Product extends \Ometria\Api\Helper\Service\Filterable\Service
             {
                 $new = $item->getData();
             }
-            
+
+            $new['parent_id'] = $item->getParentId();
             $new['url'] = $item->getProductUrl();            
             $new['category_ids'] = $item->getCategoryIds();
             $new['store_ids'] = $item->getStoreIds();
