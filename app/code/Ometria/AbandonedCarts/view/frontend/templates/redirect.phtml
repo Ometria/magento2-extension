@@ -1,9 +1,14 @@
+<?php /** @var $jsonHelper Magento\Framework\Json\Helper\Data */ ?>
+<?php $jsonHelper = $this->helper(\Magento\Framework\Json\Helper\Data::class) ?>
+
 <script type="text/x-magento-init">
-    {
-        "*": {
-            "Ometria_AbandonedCarts/js/cart-redirect": <?php /* @escapeNotVerified */ echo $block->getJsonCheckoutData();?>
-        }
-    }
+    <?= $jsonHelper->jsonEncode([
+        '*' => ['Ometria_AbandonedCarts/js/cart-redirect' => [
+            'redirectUrl' => $block->getRedirectUrl(),
+            'cookieLifeTime' => $block->getCookieLifeTime()
+        ]]
+    ]);
+    ?>
 </script>
-        
-<p> Loading Cart, please wait ...</p>
+
+<p><?= __('Loading Cart, please wait ...') ?></p>
