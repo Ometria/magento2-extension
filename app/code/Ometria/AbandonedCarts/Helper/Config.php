@@ -1,35 +1,54 @@
 <?php
 namespace Ometria\AbandonedCarts\Helper;
 
-use \Magento\Framework\App\Config\ScopeConfigInterface;
 use \Magento\Framework\App\Helper\AbstractHelper;
-use \Magento\Framework\App\Helper\Context;
+use Magento\Framework\Session\Config as SessionConfig;
+use Magento\Store\Model\ScopeInterface;
 
-class Config extends AbstractHelper {
+class Config extends AbstractHelper
+{
+    const XML_CONFIG_CART_PATH     = 'ometria_abandonedcarts/abandonedcarts/cartpath';
+    const XML_CONFIG_LINK_ENABLED  = 'ometria_abandonedcarts/abandonedcarts/enabled';
+    const XML_CONFIG_TOKEN_ENABLED = 'ometria_abandonedcarts/abandonedcarts/check_token';
+
     /**
-     * @var ScopeConfigInterface
+     * @return mixed
      */
-    protected $scopeConfig;
-
-    public function __construct(Context $context
-//         ScopeConfigInterface $scopeConfig
-    )
+    public function getCartPath()
     {
-        $this->scopeConfig = $context->getScopeConfig();
-
-        parent::__construct($context);
+        return $this->scopeConfig->getValue(
+            self::XML_CONFIG_CART_PATH
+        );
     }
 
-
-    public function getCartUrl() {
-        return $this->scopeConfig->getValue('ometria_abandonedcarts/abandonedcarts/cartpath');
+    /**
+     * @return bool
+     */
+    public function isDeeplinkEnabled()
+    {
+        return $this->scopeConfig->isSetFlag(
+            self::XML_CONFIG_LINK_ENABLED
+        );
     }
 
-    public function isDeeplinkEnabled() {
-        return $this->scopeConfig->isSetFlag('ometria_abandonedcarts/abandonedcarts/enabled');
+    /**
+     * @return bool
+     */
+    public function shouldCheckDeeplinkgToken()
+    {
+        return $this->scopeConfig->isSetFlag(
+            self::XML_CONFIG_TOKEN_ENABLED
+        );
     }
 
-    public function shouldCheckDeeplinkgToken() {
-        return $this->scopeConfig->isSetFlag('ometria_abandonedcarts/abandonedcarts/check_token');
+    /**
+     * @return mixed
+     */
+    public function getCookieLifeTime()
+    {
+        return $this->scopeConfig->getValue(
+            SessionConfig::XML_PATH_COOKIE_LIFETIME,
+            ScopeInterface::SCOPE_STORE
+        );
     }
 }

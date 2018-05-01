@@ -2,7 +2,7 @@
 	<default>
 		<ometria_abandonedcarts>
 			<abandonedcarts>
-				<cartpath>/checkout/cart</cartpath>
+				<cartpath>checkout/cart</cartpath>
 				<enabled>1</enabled>
 				<check_token>1</check_token>
 			</abandonedcarts>
