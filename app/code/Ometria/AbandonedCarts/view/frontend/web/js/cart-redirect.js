@@ -1,15 +1,56 @@
 define([
-    "jquery",
-], function(jQuery){
+    'jquery',
+    'Magento_Customer/js/customer-data'
+], function(
+    $,
+    customerData
+){
     "use strict";
-    return function(data, domElement){
-        setTimeout(function(){        
-            var $ = jQuery;
-            var storage = $.initNamespaceStorage('mage-cache-storage').localStorage;        
+
+    $.widget('ometria.redirect', {
+        options: {
+            redirectTimeout: 1000,
+            cookieLifeTime: 3600,
+            redirectUrl: '/checkout/cart/'
+        },
+
+        /**
+         * @private
+         */
+        _create: function () {
+            setTimeout(function () {
+                this._clearStorage();
+                this._invalidateCacheTimeOut();
+
+                if (this.options.redirectUrl) {
+                    this._redirect(this.options.redirectUrl);
+                }
+            }.bind(this), this.options.redirectTimeout);
+        },
+
+        /**
+         * @private
+         */
+        _clearStorage: function () {
+            var storage = $.initNamespaceStorage('mage-cache-storage').localStorage;
             storage.removeAll();
-            var date = new Date(Date.now() + 24 * 1000);
-            $.localStorage.set('mage-cache-timeout', date);        
-            document.location = data.url;
-        }, 1000);
-    };
+        },
+
+        /**
+         * @private
+         */
+        _invalidateCacheTimeOut: function () {
+            var date = new Date(Date.now() + parseInt(this.options.cookieLifeTime, 10) * 1000);
+            $.localStorage.set('mage-cache-timeout', date);
+        },
+
+        /**
+         * @private
+         */
+        _redirect: function (redirectUrl) {
+            document.location = redirectUrl;
+        }
+    });
+
+    return $.ometria.redirect;
 });

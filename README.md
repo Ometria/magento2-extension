@@ -62,7 +62,7 @@ add the latest stable version of `ometria/magento2` to your `composer.json` file
     //...
     "require": {
         //...
-        "ometria/magento2": "^1.3"
+        "ometria/magento2": "^1.4"
     },
     //...
 
@@ -79,5 +79,18 @@ The final two commands are **Magento** commands.  This command enables the three
 Once a module is enabled, the rest of Magento can "see" it. The last command tells Magento to actually install the module.
 
     php bin/magento setup:upgrade
+
+Upgrading the Extension
+--------------------------------------------------
+
+Composer can be used to upgrade an existing install of the module to the latest release using the following commands:
+
+    composer require ometria/magento2 --no-update
+    composer update ometria/magento2
+    php bin/magento setup:upgrade
+
+This will update your `composer.json` file's `require` section with the latest stable version of `ometria/magento2`. Then the latest code at that version will be pulled in by `composer update`. Finally re-running the Magento `setup:upgrade` command will ensure the module is installed correctly at the new version.
+
+If you installed the module manually in to app/code please ensure you remove all of the existing module files before replacing with the new files from the latest release and re-running the Magento `setup:upgrade` command. 
 
 **Important:** Changing a Magento system running in production is **not** a recommended practice.  Depending on your system software, or other running extensions, running `setup:upgrade` may trigger undesired behaviors.  As will installing **any** new software on your system, don't forget to take appropriate backup steps, and to test your new module in a development or staging environment before deploying to production.
