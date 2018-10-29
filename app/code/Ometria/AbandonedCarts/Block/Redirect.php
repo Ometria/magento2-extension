@@ -26,19 +26,17 @@ class Redirect extends Template
      * @param Context $context
      * @param ConfigHelper $configHelper
      * @param QuoteModel $quoteModel
-     * @param Session $session
      * @param array $data
      */
     public function __construct(
         Context $context,
         ConfigHelper $configHelper,
         QuoteModel $quoteModel,
-        Session $session,
         array $data = []
     ) {
         $this->configHelper = $configHelper;
         $this->quoteModel = $quoteModel;
-        $this->session = $session;
+        $this->session = $context->getSession();
 
         parent::__construct($context, $data);
     }
