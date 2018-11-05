@@ -25,6 +25,7 @@ class Products extends Base
     protected $request;
     protected $directoryHelper;
     protected $storeUrlHelper;
+    protected $groupedType;
 
     protected $storeIdCache=false;
 
@@ -51,8 +52,8 @@ class Products extends Base
         \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Framework\App\ResourceConnection $resourceConnection,
         \Magento\Directory\Helper\Data $directoryHelper,
-        \Ometria\Api\Helper\StoreUrl $storeUrlHelper
-
+        \Ometria\Api\Helper\StoreUrl $storeUrlHelper,
+        \Magento\GroupedProduct\Model\Product\Type\Grouped $groupedType
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -73,6 +74,7 @@ class Products extends Base
 		$this->resourceConnection         = $resourceConnection;
 		$this->directoryHelper            = $directoryHelper;
 		$this->storeUrlHelper             = $storeUrlHelper;
+        $this->groupedType                = $groupedType;
 	}
 
 	protected function getArrayKey($array, $key)
@@ -135,9 +137,9 @@ class Products extends Base
         $tmp['is_active']   = $this->getArrayKey($item, 'status') !== \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_DISABLED;
         $tmp['stores']      = $this->getArrayKey($item, 'store_ids');
 
-        // Add parent ID if this is a configurable variant simple product
-        if ($this->getArrayKey($item, 'parent_id') !== null) {
-            $tmp['parent_id'] = $this->getArrayKey($item, 'parent_id');
+        // Add parent ID if this is a variant simple product
+        if ($variantParentId = $this->getVariantParentId($item)) {
+            $tmp['parent_id'] = $variantParentId;
             $tmp['is_variant'] = true;
         }
 
@@ -476,5 +478,36 @@ class Products extends Base
         }
 
         return $price;
+    }
+
+    /**
+     * @param array $item
+     * @return int|bool
+     */
+    protected function getVariantParentId($item)
+    {
+        $productId = $this->getArrayKey($item, 'id');
+        
+        /**
+         * Check for Configurable relationship.
+         * @see addProductParentIdToCollection
+         */
+        $configurableParentId = $this->getArrayKey($item, 'parent_id');
+        if ($configurableParentId !== null) {
+            return $configurableParentId;
+        }
+
+        /**
+         * Check for Grouped relationship.
+         * Return the first Parent ID should multiple exist.
+         */
+        if ($productId) {
+            $groupedParentIds = $this->groupedType->getParentIdsByChild($productId);
+            if (count($groupedParentIds)) {
+                return array_shift($groupedParentIds);
+            }
+        }
+        
+        return false;
     }
 }
