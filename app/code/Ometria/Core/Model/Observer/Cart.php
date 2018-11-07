@@ -2,7 +2,6 @@
 
 namespace Ometria\Core\Model\Observer; 
 use Magento\Framework\Event\Observer;
-use Magento\GroupedProduct\Model\Product\Type\Grouped;
 
 class Cart   
 {
@@ -73,7 +72,7 @@ class Cart
         $count = 0;
         foreach($cart->getAllVisibleItems() as $item){
             //$product =  Mage::getModel('catalog/product')->load($item->getProductId());
-            $product = $this->productFactory->create()->load($this->getProductIdToLoad($item));
+            $product = $this->productFactory->create()->load($this->getMasterProductId($item));
             $buffer = array(
                 'i'=>$ometria_product_helper->getIdentifierForProduct($product),
                 //'s'=>$product->getSku(),
@@ -145,16 +144,16 @@ class Cart
      * @param \Magento\Quote\Model\Quote\Item $item
      * @return int
      */
-    protected function getProductIdToLoad($item)
+    protected function getMasterProductId($item)
     {
         $productIdToLoad = $item->getProductId();
         
-        // for Grouped Products, use the Parent Product ID instead of the child / simple
+        // for Grouped Products, use the Parent Product ID instead of the Child ID
         $superProductConfig = $item->getBuyRequest()->getData('super_product_config');
         if (
             is_array($superProductConfig)
             && array_key_exists('product_type', $superProductConfig)
-            && $superProductConfig['product_type'] == Grouped::TYPE_CODE
+            && $superProductConfig['product_type'] == \Magento\GroupedProduct\Model\Product\Type\Grouped::TYPE_CODE
         ) {
             $productIdToLoad = !empty($superProductConfig['product_id'])
                 ? $superProductConfig['product_id']

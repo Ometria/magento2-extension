@@ -517,7 +517,7 @@ class Products extends Base
 
     /**
      * Bulk version of the native method to retrieve relationships one by one.
-     * @see \Magento\Catalog\Model\ResourceModel\Product\Link::getParentIdsByChild
+     * @see \Magento\GroupedProduct\Model\ResourceModel\Product\Link::getParentIdsByChild
      * 
      * @param array $childIds
      * @return array
