@@ -59,6 +59,7 @@ class Products extends Base
         \Magento\Framework\App\ResourceConnection $resourceConnection,
         \Magento\Directory\Helper\Data $directoryHelper,
         \Ometria\Api\Helper\StoreUrl $storeUrlHelper
+
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
