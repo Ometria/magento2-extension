@@ -95,6 +95,11 @@ class Customers extends Base
             $new["marketing_optin"]   = $this->getMarketingOption($item, $subscriber_collection);
             $new["country_id"]        = $this->customerDataHelper->getCountryId($item);
             $new["store_id"]          = array_key_exists('store_id', $item) ? $item['store_id'] : null;
+
+            if ($this->_request->getParam('raw') === 'true') {
+                $new['_raw'] = $item;
+            }
+            
             return $new;
         }, $items);
 
