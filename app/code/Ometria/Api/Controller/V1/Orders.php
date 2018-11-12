@@ -234,7 +234,7 @@ class Orders extends Base
                 $new["quantity"]          = $line_item['parent']['qty_ordered'];
                 $new["unit_price"]        = $line_item['parent']['price'];
                 $new["subtotal"]          = $line_item['parent']['row_total'];
-                $new["discount"]          = $line_item['parent']['discount_amount'];
+                $new["discount"]          = '-' . $line_item['parent']['discount_amount'];
                 $new["discount_percent"]  = $line_item['parent']['discount_percent'];
                 $new["tax"]               = $line_item['parent']['tax_amount'];
                 $new["tax_percent"]       = $line_item['parent']['tax_percent'];
