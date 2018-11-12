@@ -101,6 +101,10 @@ class Orders extends Base
                 'x_forwarded_for'   => $item['x_forwarded_for'],
                 'increment_id'      => $item['increment_id']
             ];
+
+            if ($this->_request->getParam('raw') === 'true') {
+                $new['_raw'] = $item;
+            }
             
 	        $items[$key] = $new;
 	    }
