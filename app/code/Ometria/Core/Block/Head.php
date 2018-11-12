@@ -202,9 +202,16 @@ class Head extends \Magento\Framework\View\Element\Template
              * Only show price info for product types where relevant
              */
             if ($this->coreHelperProduct->canShowProductPrice($product)) {
-                $productInfo['price'] = $this->coreHelperProduct->getProductRegularPrice($product);
-                $productInfo['special_price'] = $this->coreHelperProduct->getProductFinalPrice($product);
+                $price = $this->coreHelperProduct->getProductRegularPrice($product);
+                $finalPrice = $this->coreHelperProduct->getProductFinalPrice($product);
+
                 $productInfo['currency'] = $this->_getCurrencyCode();
+                $productInfo['price'] = $price;
+
+                // Only show 'special_price' if discounted price is less than regular price.
+                if ($finalPrice < $price) {
+                    $productInfo['special_price'] = $finalPrice;
+                }
             }
 
             return $productInfo;
