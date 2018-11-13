@@ -101,6 +101,10 @@ class Orders extends Base
                 'x_forwarded_for'   => $item['x_forwarded_for'],
                 'increment_id'      => $item['increment_id']
             ];
+
+            if ($this->_request->getParam('raw') === 'true') {
+                $new['_raw'] = $item;
+            }
             
 	        $items[$key] = $new;
 	    }
@@ -228,8 +232,18 @@ class Orders extends Base
 
                 $new["sku"]               = $line_item['parent']['sku'];
                 $new["quantity"]          = $line_item['parent']['qty_ordered'];
-                $new["unit_price"]        = $line_item['parent']['base_price'];
-                $new["total"]             = $line_item['parent']['row_total'];
+                $new["unit_price"]        = $line_item['parent']['price'];
+                $new["subtotal"]          = $line_item['parent']['row_total'];
+                $new["discount"]          = '-' . $line_item['parent']['discount_amount'];
+                $new["discount_percent"]  = $line_item['parent']['discount_percent'];
+                $new["tax"]               = $line_item['parent']['tax_amount'];
+                $new["tax_percent"]       = $line_item['parent']['tax_percent'];
+                $new["total"]             = (string)(
+                      $line_item['parent']['row_total']
+                    + $line_item['parent']['tax_amount']
+                    - $line_item['parent']['discount_amount']
+                );
+                
                 $new_line_items[] = $new;
             }
             $item['lineitems'] = $new_line_items;  

@@ -90,4 +90,45 @@ class Product extends AbstractHelper
             return $product_model->load($id);
         }
     }
+
+    /**
+     * @param \Magento\Catalog\Model\Product $product
+     * @return mixed
+     */
+    public function getProductImageUrl($product)
+    {
+        return $product->getMediaGalleryImages()->getFirstItem()->getUrl();
+    }
+
+    /**
+     * @param \Magento\Catalog\Model\Product $product
+     * @return bool
+     */
+    public function canShowProductPrice($product)
+    {
+        // Grouped products have no price themselves, so can't show a price for this product type
+        if ($product->getTypeId() == \Magento\GroupedProduct\Model\Product\Type\Grouped::TYPE_CODE) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param \Magento\Catalog\Model\Product $product
+     * @return mixed
+     */
+    public function getProductFinalPrice($product)
+    {
+        return $product->getPriceInfo()->getPrice('final_price')->getAmount()->getValue();
+    }
+
+    /**
+     * @param \Magento\Catalog\Model\Product $product
+     * @return mixed
+     */
+    public function getProductRegularPrice($product)
+    {
+        return $product->getPriceInfo()->getPrice('regular_price')->getAmount()->getValue();
+    }
 }
