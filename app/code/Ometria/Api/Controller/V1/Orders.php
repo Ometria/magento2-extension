@@ -12,7 +12,7 @@ class Orders extends Base
     protected $salesOrderAddressFactory;
     protected $ordersCollection;
     protected $orderValidTester;
-    
+    protected $weeeHelper;
     
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
@@ -22,7 +22,8 @@ class Orders extends Base
 		\Magento\Sales\Model\ResourceModel\Order\Payment\Collection $paymentsCollection,
 		\Magento\Sales\Model\Order\AddressFactory $salesOrderAddressFactory,
 		\Magento\Sales\Model\ResourceModel\Order\Collection $ordersCollection,
-		\Ometria\Api\Helper\Order\IsValid $orderValidTester		
+		\Ometria\Api\Helper\Order\IsValid $orderValidTester,
+        \Magento\Weee\Helper\Data $weeeHelper
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory           = $resultJsonFactory;
@@ -32,6 +33,7 @@ class Orders extends Base
 		$this->paymentsCollection          = $paymentsCollection;
 		$this->ordersCollection            = $ordersCollection;
 		$this->orderValidTester            = $orderValidTester;
+		$this->weeeHelper                  = $weeeHelper;
 	}
 	
 	protected function fixMissingCustomerNames($item)
@@ -238,11 +240,9 @@ class Orders extends Base
                 $new["discount_percent"]  = $line_item['parent']['discount_percent'];
                 $new["tax"]               = $line_item['parent']['tax_amount'];
                 $new["tax_percent"]       = $line_item['parent']['tax_percent'];
-                $new["total"]             = (string)(
-                      $line_item['parent']['row_total']
-                    + $line_item['parent']['tax_amount']
-                    - $line_item['parent']['discount_amount']
-                );
+                
+                $_orderItem = $line_items->getItemById($line_item['parent']['item_id']);
+                $new["total"] = (string)$this->calculateLineItemTotal($_orderItem);
                 
                 $new_line_items[] = $new;
             }
@@ -250,6 +250,22 @@ class Orders extends Base
             $items[$key]        = $item;                              
 	    }    	    
         return $items;    
+	}
+
+    /**
+     * @param \Magento\Sales\Model\Order\Item|\Magento\Quote\Model\Quote\Item\AbstractItem $item
+     * @return mixed
+     * @see \Magento\Weee\Block\Item\Price\Renderer::getTotalAmount
+     */
+    protected function calculateLineItemTotal($item)
+    {
+        $totalAmount = $item->getRowTotal()
+            - $item->getDiscountAmount()
+            + $item->getTaxAmount()
+            + $item->getDiscountTaxCompensationAmount()
+            + $this->weeeHelper->getRowWeeeTaxInclTax($item);
+
+        return $totalAmount;
 	}
 	
 	protected function replaceIdWithIncrementId($items)
