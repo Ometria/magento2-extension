@@ -42,6 +42,7 @@ class Products extends Base
      * @var array
      */
     protected $childParentConfigurableProductIds = [];
+    protected $childParentBundleProductIds = [];
     protected $childParentGroupedProductIds = [];
 
 	public function __construct(
@@ -489,6 +490,9 @@ class Products extends Base
         $this->childParentConfigurableProductIds = $this->getConfigurableProductParentChildIds($allProductIds);
 
         // fetch array of Grouped Product relationships, filtered by the items being processed
+        $this->childParentBundleProductIds = $this->getBundleProductParentChildIds($allProductIds);
+
+        // fetch array of Grouped Product relationships, filtered by the items being processed
         $this->childParentGroupedProductIds = $this->getGroupedProductParentChildIds($allProductIds);
     }
 
@@ -520,6 +524,39 @@ class Products extends Base
         $result = $connection->fetchAll($select);
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['parent_id'];
+        }
+
+        return $childToParentIds;
+    }
+
+    /**
+     * Bulk version of the native method to retrieve relationships one by one.
+     * @see \Magento\Bundle\Model\ResourceModel\Selection::getParentIdsByChild
+     * 
+     * @param array $childIds
+     * @return array
+     */
+    protected function getBundleProductParentChildIds(array $childIds)
+    {
+        $childToParentIds = [];
+
+        $connection = $this->resourceConnection->getConnection();
+        
+        $select = $connection->select()
+            ->from(
+                $this->resourceConnection->getTableName('catalog_product_bundle_selection'),
+                ['parent_product_id', 'product_id']
+            )
+            ->where(
+                'product_id IN (?)',
+                $childIds
+            )
+            // order by the oldest selections first so the iterator will end with the most recent link 
+            ->order('selection_id ASC');
+
+        $result = $connection->fetchAll($select);
+        foreach ($result as $_row) {
+            $childToParentIds[$_row['product_id']] = $_row['parent_product_id'];
         }
 
         return $childToParentIds;
@@ -569,11 +606,29 @@ class Products extends Base
     protected function getVariantParentId($item)
     {
         $productId = $this->getArrayKey($item, 'id');
+        
+        // if the product can be viewed individually, it should not be treated as a variant
+        $visibleInSiteVisibilities = [
+            \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_CATALOG,
+            \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_SEARCH,
+            \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH,
+        ];
+        $visibility = $this->getArrayKey($item, 'visibility');
+        if (in_array($visibility, $visibleInSiteVisibilities)) {
+            return false;
+        }
 
+        // if the product is associated to a configurable product, return the parent ID
         if (array_key_exists($productId, $this->childParentConfigurableProductIds)) {
             return $this->childParentConfigurableProductIds[$productId];
         }
 
+        // if the product is associated to a bundle product, return the parent ID
+        if (array_key_exists($productId, $this->childParentBundleProductIds)) {
+            return $this->childParentBundleProductIds[$productId];
+        }
+
+        // if the product is associated to a grouped product, return the parent ID
         if (array_key_exists($productId, $this->childParentGroupedProductIds)) {
             return $this->childParentGroupedProductIds[$productId];
         }
