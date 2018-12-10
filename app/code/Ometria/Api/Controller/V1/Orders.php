@@ -244,6 +244,10 @@ class Orders extends Base
                 $_orderItem = $line_items->getItemById($line_item['parent']['item_id']);
                 $new["total"] = (string)$this->calculateLineItemTotal($_orderItem);
                 
+                if ($this->_request->getParam('raw') === 'true') {
+                    $new['_raw'] = $line_item;
+                }
+
                 $new_line_items[] = $new;
             }
             $item['lineitems'] = $new_line_items;  
@@ -259,6 +263,11 @@ class Orders extends Base
      */
     protected function calculateLineItemTotal($item)
     {
+        // just in case getItemById() returned null
+        if (!$item) {
+            return null;
+        }
+        
         $totalAmount = $item->getRowTotal()
             - $item->getDiscountAmount()
             + $item->getTaxAmount()
