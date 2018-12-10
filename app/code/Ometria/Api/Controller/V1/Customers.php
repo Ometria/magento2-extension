@@ -12,6 +12,9 @@ class Customers extends Base
     protected $subscriberCollection;
     protected $customerIdsOfNewsLetterSubscribers=[];
     protected $customerDataHelper;
+    protected $searchCriteriaBuilder;
+    protected $groupRepository;
+    protected $customerGroupNames;
 
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
@@ -20,7 +23,9 @@ class Customers extends Base
 		\Magento\Customer\Api\CustomerRepositoryInterface $customerRepository,
 		\Magento\Customer\Api\CustomerMetadataInterface $customerMetadataInterface,
 		\Magento\Newsletter\Model\ResourceModel\Subscriber\Collection $subscriberCollection,
-        \Ometria\Api\Helper\CustomerData $customerDataHelper
+        \Ometria\Api\Helper\CustomerData $customerDataHelper,
+        \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
+        \Magento\Customer\Api\GroupRepositoryInterface $groupRepository
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory            = $resultJsonFactory;
@@ -29,6 +34,8 @@ class Customers extends Base
 		$this->subscriberCollection         = $subscriberCollection;
 		$this->customerMetadataInterface    = $customerMetadataInterface;
 		$this->customerDataHelper           = $customerDataHelper;
+		$this->searchCriteriaBuilder        = $searchCriteriaBuilder;
+		$this->groupRepository              = $groupRepository;
 
 		$this->genderOptions                = $this->customerMetadataInterface
             ->getAttributeMetadata('gender')
@@ -98,6 +105,10 @@ class Customers extends Base
 
             if ($this->_request->getParam('raw') === 'true') {
                 $new['_raw'] = $item;
+                
+                $new['_raw']['_ometria'] = [
+                    'group_name' => $this->getCustomerGroupName($item['group_id']),
+                ];
             }
             
             return $new;
@@ -105,5 +116,28 @@ class Customers extends Base
 
 		$result = $this->resultJsonFactory->create();
 		return $result->setData($items);
+    }
+
+    /**
+     * @param int $id
+     * @return string|null
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    protected function getCustomerGroupName($id)
+    {
+        if ($this->customerGroupNames === null) {
+            $this->customerGroupNames = [];
+            
+            $searchCriteria = $this->searchCriteriaBuilder->create();
+            $groups = $this->groupRepository->getList($searchCriteria)->getItems();
+            
+            foreach ($groups as $_group) {
+                $this->customerGroupNames[$_group->getId()] = $_group->getCode();
+            }
+        }
+        
+        return array_key_exists($id, $this->customerGroupNames)
+            ? $this->customerGroupNames[$id]
+            : null;
     }
 }
