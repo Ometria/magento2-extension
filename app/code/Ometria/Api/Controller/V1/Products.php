@@ -489,7 +489,7 @@ class Products extends Base
         // fetch array of Configurable Product relationships, filtered by the items being processed
         $this->childParentConfigurableProductIds = $this->getConfigurableProductParentChildIds($allProductIds);
 
-        // fetch array of Grouped Product relationships, filtered by the items being processed
+        // fetch array of Bundle Product relationships, filtered by the items being processed
         $this->childParentBundleProductIds = $this->getBundleProductParentChildIds($allProductIds);
 
         // fetch array of Grouped Product relationships, filtered by the items being processed
