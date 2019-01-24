@@ -4,6 +4,8 @@ use Ometria\Api\Helper\Format\V1\Products as Helper;
 use \Ometria\Api\Controller\V1\Base;
 class Products extends Base
 {
+    const PRODUCT_TYPE_IDX = 'magento_product_type';
+
     protected $resultJsonFactory;
     protected $apiHelperServiceFilterable;
     protected $productRepository;
@@ -27,11 +29,21 @@ class Products extends Base
     protected $storeUrlHelper;
 
     protected $storeIdCache=false;
+    protected $productTypeFactory;
 
     /**
     * Prevent twice joining visibility if its added as filter
     */
     protected $needsVisibilityJoin;
+    protected $productTypeNames;
+
+    /**
+     * Cache of child:parent relationships
+     * @var array
+     */
+    protected $childParentConfigurableProductIds = [];
+    protected $childParentBundleProductIds = [];
+    protected $childParentGroupedProductIds = [];
 
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
@@ -51,8 +63,8 @@ class Products extends Base
         \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Framework\App\ResourceConnection $resourceConnection,
         \Magento\Directory\Helper\Data $directoryHelper,
-        \Ometria\Api\Helper\StoreUrl $storeUrlHelper
-
+        \Ometria\Api\Helper\StoreUrl $storeUrlHelper,
+        \Magento\Catalog\Model\Product\TypeFactory $productTypeFactory
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -73,6 +85,7 @@ class Products extends Base
 		$this->resourceConnection         = $resourceConnection;
 		$this->directoryHelper            = $directoryHelper;
 		$this->storeUrlHelper             = $storeUrlHelper;
+        $this->productTypeFactory         = $productTypeFactory;
 	}
 
 	protected function getArrayKey($array, $key)
@@ -135,9 +148,9 @@ class Products extends Base
         $tmp['is_active']   = $this->getArrayKey($item, 'status') !== \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_DISABLED;
         $tmp['stores']      = $this->getArrayKey($item, 'store_ids');
 
-        // Add parent ID if this is a configurable variant simple product
-        if ($this->getArrayKey($item, 'parent_id') !== null) {
-            $tmp['parent_id'] = $this->getArrayKey($item, 'parent_id');
+        // Add parent ID if this is a variant simple product
+        if ($variantParentId = $this->getVariantParentId($item)) {
+            $tmp['parent_id'] = $variantParentId;
             $tmp['is_variant'] = true;
         }
 
@@ -179,6 +192,11 @@ class Products extends Base
         {
             $tmp['attributes'][] = $category;
         }
+
+        if ($productTypeData = $this->getProductTypeData($item)) {
+            $tmp['attributes'][] = $productTypeData;
+        }
+
         return $tmp;
 	}
 
@@ -216,8 +234,6 @@ class Products extends Base
             $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
         }
 
-        $this->addProductParentIdToCollection($collection);
-
         $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
 
         if($this->_request->getParam('listing') === 'true')
@@ -228,6 +244,9 @@ class Products extends Base
                 // pass
             }
         }
+        
+        $this->prepareChildParentRelationships($items);
+        
         $items      = array_map(function($item){
             return $this->serializeItem($item);
         }, $items);
@@ -235,33 +254,6 @@ class Products extends Base
         $items = array_values($items);
         return $items;
 	}
-
-    /**
-     * Join on configurable product relationship table to
-     * retrieve parent ID of configurable variant simple products.
-     *
-     * Where a simple has multiple parents defined only the most
-     * recent parent association will be returned in the results.
-     *
-     * @param $collection
-     */
-    private function addProductParentIdToCollection($collection)
-    {
-        $collection->joinField(
-            'parent_id',
-            'catalog_product_super_link',
-            'parent_id',
-            'product_id=entity_id',
-            null,
-            'left'
-        );
-
-        /*
-         * Group by product entity_id to prevent duplicate rows
-         * if simples have been assigned to multiple configurables
-         */
-        $collection->getSelect()->group('e.entity_id');
-    }
 
     public function execute()
     {
@@ -476,5 +468,225 @@ class Products extends Base
         }
 
         return $price;
+    }
+
+    /**
+     * @param array $items
+     */
+    protected function prepareChildParentRelationships(array $items)
+    {
+        // retrieve all Product IDs from the data being processed
+        $allProductIds = [];
+        foreach ($items as $_item) {
+            $_productId = $this->getArrayKey($_item, 'id');
+            if (!$_productId) {
+                continue;
+            }
+
+            $allProductIds[] = $_productId;
+        }
+
+        // fetch array of Configurable Product relationships, filtered by the items being processed
+        $this->childParentConfigurableProductIds = $this->getConfigurableProductParentChildIds($allProductIds);
+
+        // fetch array of Bundle Product relationships, filtered by the items being processed
+        $this->childParentBundleProductIds = $this->getBundleProductParentChildIds($allProductIds);
+
+        // fetch array of Grouped Product relationships, filtered by the items being processed
+        $this->childParentGroupedProductIds = $this->getGroupedProductParentChildIds($allProductIds);
+    }
+
+    /**
+     * Bulk version of the native method to retrieve relationships one by one.
+     * @see \Magento\ConfigurableProduct\Model\ResourceModel\Product\Type\Configurable::getParentIdsByChild
+     *
+     * @param array $childIds
+     * @return array
+     */
+    protected function getConfigurableProductParentChildIds(array $childIds)
+    {
+        $childToParentIds = [];
+
+        $connection = $this->resourceConnection->getConnection();
+        
+        $select = $connection->select()
+            ->from(
+                $this->resourceConnection->getTableName('catalog_product_super_link'),
+                ['product_id', 'parent_id']
+            )
+            ->where(
+                'product_id IN (?)',
+                $childIds
+            )
+            // order by the oldest links first so the iterator will end with the most recent link 
+            ->order('link_id ASC');
+        
+        $result = $connection->fetchAll($select);
+        foreach ($result as $_row) {
+            $childToParentIds[$_row['product_id']] = $_row['parent_id'];
+        }
+
+        return $childToParentIds;
+    }
+
+    /**
+     * Bulk version of the native method to retrieve relationships one by one.
+     * @see \Magento\Bundle\Model\ResourceModel\Selection::getParentIdsByChild
+     * 
+     * @param array $childIds
+     * @return array
+     */
+    protected function getBundleProductParentChildIds(array $childIds)
+    {
+        $childToParentIds = [];
+
+        $connection = $this->resourceConnection->getConnection();
+        
+        $select = $connection->select()
+            ->from(
+                $this->resourceConnection->getTableName('catalog_product_bundle_selection'),
+                ['parent_product_id', 'product_id']
+            )
+            ->where(
+                'product_id IN (?)',
+                $childIds
+            )
+            // order by the oldest selections first so the iterator will end with the most recent link 
+            ->order('selection_id ASC');
+
+        $result = $connection->fetchAll($select);
+        foreach ($result as $_row) {
+            $childToParentIds[$_row['product_id']] = $_row['parent_product_id'];
+        }
+
+        return $childToParentIds;
+    }
+
+    /**
+     * Bulk version of the native method to retrieve relationships one by one.
+     * @see \Magento\GroupedProduct\Model\ResourceModel\Product\Link::getParentIdsByChild
+     * 
+     * @param array $childIds
+     * @return array
+     */
+    protected function getGroupedProductParentChildIds(array $childIds)
+    {
+        $childToParentIds = [];
+
+        $connection = $this->resourceConnection->getConnection();
+        
+        $select = $connection->select()
+            ->from(
+                $this->resourceConnection->getTableName('catalog_product_link'),
+                ['product_id', 'linked_product_id']
+            )
+            ->where(
+                'linked_product_id IN (?)',
+                $childIds
+            )
+            ->where(
+                'link_type_id = ?',
+                \Magento\GroupedProduct\Model\ResourceModel\Product\Link::LINK_TYPE_GROUPED
+            )
+            // order by the oldest links first so the iterator will end with the most recent link 
+            ->order('link_id ASC');
+
+        $result = $connection->fetchAll($select);
+        foreach ($result as $_row) {
+            $childToParentIds[$_row['linked_product_id']] = $_row['product_id'];
+        }
+
+        return $childToParentIds;
+    }
+
+    /**
+     * @param array $item
+     * @return int|bool
+     */
+    protected function getVariantParentId($item)
+    {
+        $productId = $this->getArrayKey($item, 'id');
+        
+        // if the product can be viewed individually, it should not be treated as a variant
+        $visibleInSiteVisibilities = [
+            \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_CATALOG,
+            \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_SEARCH,
+            \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH,
+        ];
+        $visibility = $this->getArrayKey($item, 'visibility');
+        if (in_array($visibility, $visibleInSiteVisibilities)) {
+            return false;
+        }
+
+        // if the product is associated to a configurable product, return the parent ID
+        if (array_key_exists($productId, $this->childParentConfigurableProductIds)) {
+            return $this->childParentConfigurableProductIds[$productId];
+        }
+
+        // if the product is associated to a bundle product, return the parent ID
+        if (array_key_exists($productId, $this->childParentBundleProductIds)) {
+            return $this->childParentBundleProductIds[$productId];
+        }
+
+        // if the product is associated to a grouped product, return the parent ID
+        if (array_key_exists($productId, $this->childParentGroupedProductIds)) {
+            return $this->childParentGroupedProductIds[$productId];
+        }
+
+        return false;
+    }
+
+    /**
+     * @param $item
+     * @return array
+     */
+    protected function getProductTypeData($item)
+    {
+        $typeId = $this->getArrayKey($item, 'type_id');
+        $typeName = $this->getProductTypeNameById($typeId);
+
+        return [
+            'type' => self::PRODUCT_TYPE_IDX,
+            'value' => $typeId,
+            'label' => $typeName
+        ];
+    }
+
+    /**
+     * @param $typeId
+     * @return string
+     */
+    protected function getProductTypeNameById($typeId)
+    {
+        $typeNames = $this->getProductTypeNames();
+
+        if (isset($typeNames[$typeId])) {
+            $name = $typeNames[$typeId];
+        }
+        else {
+            // Default to uppercased type_id (this should never happen).
+            $name = ucwords($typeId);
+        }
+
+        return $name;
+    }
+
+    /**
+     * Retrieve array of product type id top name mappings
+     * @return mixed
+     */
+    protected function getProductTypeNames()
+    {
+        if (!isset($this->productTypeNames)) {
+            $types = $this->productTypeFactory->create()->getTypes();
+
+            foreach ($types as $type) {
+                if (isset($type['name']) && isset($type['label'])) {
+                    $this->productTypeNames[$type['name']] = $type['label']->getText();
+                }
+            }
+        }
+
+        return $this->productTypeNames;
     }
 }

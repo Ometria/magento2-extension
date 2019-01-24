@@ -125,8 +125,12 @@ class Head extends \Magento\Framework\View\Element\Template
     
     protected function _getStore() {
         return $this->storeModelStoreManagerInterface->getStore()->getStoreId();
-    }    
-    
+    }
+
+    protected function _getCurrencyCode() {
+        return $this->storeModelStoreManagerInterface->getStore()->getCurrentCurrency()->getCode();
+    }
+
     protected function _getRouteName() {
         return $this->getRequest()->getRouteName();
     }  
@@ -176,17 +180,41 @@ class Head extends \Magento\Framework\View\Element\Template
         return (boolean) $stock->getIsInStock();
     }
     
-    protected function _getProductInfo( $product) {
-        $ometria_product_helper = $this->coreHelperProduct;
-        
+    protected function _getProductInfo($product) {
         if($product instanceof \Magento\Catalog\Model\Product) {
-            return array(
-                'id'                              => $ometria_product_helper->getIdentifierForProduct($product),
-                'sku'                             => $product->getSku(),
-                'name'                            => $product->getName(),
-                'url'                             => $product->getProductUrl(),
-                'in_stock'                        => $this->_getProductInStock($product)
+
+            $productInfo = array(
+                'id'        => $this->coreHelperProduct->getIdentifierForProduct($product),
+                'sku'       => $product->getSku(),
+                'name'      => $product->getName(),
+                'url'       => $product->getProductUrl(),
+                'in_stock'  => $this->_getProductInStock($product)
             );
+
+            /**
+             * Only show image info for products with an image
+             */
+            if ($imageUrl = $this->coreHelperProduct->getProductImageUrl($product)) {
+                $productInfo['image_url'] = $imageUrl;
+            }
+
+            /**
+             * Only show price info for product types where relevant
+             */
+            if ($this->coreHelperProduct->canShowProductPrice($product)) {
+                $price = $this->coreHelperProduct->getProductRegularPrice($product);
+                $finalPrice = $this->coreHelperProduct->getProductFinalPrice($product);
+
+                $productInfo['currency'] = $this->_getCurrencyCode();
+                $productInfo['price'] = $price;
+
+                // Only show 'special_price' if discounted price is less than regular price.
+                if ($finalPrice < $price) {
+                    $productInfo['special_price'] = $finalPrice;
+                }
+            }
+
+            return $productInfo;
         }
 
         return false;

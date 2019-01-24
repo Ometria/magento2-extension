@@ -12,7 +12,7 @@ class Orders extends Base
     protected $salesOrderAddressFactory;
     protected $ordersCollection;
     protected $orderValidTester;
-    
+    protected $weeeHelper;
     
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
@@ -22,7 +22,8 @@ class Orders extends Base
 		\Magento\Sales\Model\ResourceModel\Order\Payment\Collection $paymentsCollection,
 		\Magento\Sales\Model\Order\AddressFactory $salesOrderAddressFactory,
 		\Magento\Sales\Model\ResourceModel\Order\Collection $ordersCollection,
-		\Ometria\Api\Helper\Order\IsValid $orderValidTester		
+		\Ometria\Api\Helper\Order\IsValid $orderValidTester,
+        \Magento\Weee\Helper\Data $weeeHelper
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory           = $resultJsonFactory;
@@ -32,6 +33,7 @@ class Orders extends Base
 		$this->paymentsCollection          = $paymentsCollection;
 		$this->ordersCollection            = $ordersCollection;
 		$this->orderValidTester            = $orderValidTester;
+		$this->weeeHelper                  = $weeeHelper;
 	}
 	
 	protected function fixMissingCustomerNames($item)
@@ -101,6 +103,10 @@ class Orders extends Base
                 'x_forwarded_for'   => $item['x_forwarded_for'],
                 'increment_id'      => $item['increment_id']
             ];
+
+            if ($this->_request->getParam('raw') === 'true') {
+                $new['_raw'] = $item;
+            }
             
 	        $items[$key] = $new;
 	    }
@@ -228,14 +234,47 @@ class Orders extends Base
 
                 $new["sku"]               = $line_item['parent']['sku'];
                 $new["quantity"]          = $line_item['parent']['qty_ordered'];
-                $new["unit_price"]        = $line_item['parent']['base_price'];
-                $new["total"]             = $line_item['parent']['row_total'];
+                $new["unit_price"]        = $line_item['parent']['price'];
+                $new["subtotal"]          = $line_item['parent']['row_total'];
+                $new["discount"]          = '-' . $line_item['parent']['discount_amount'];
+                $new["discount_percent"]  = $line_item['parent']['discount_percent'];
+                $new["tax"]               = $line_item['parent']['tax_amount'];
+                $new["tax_percent"]       = $line_item['parent']['tax_percent'];
+                
+                $_orderItem = $line_items->getItemById($line_item['parent']['item_id']);
+                $new["total"] = (string)$this->calculateLineItemTotal($_orderItem);
+                
+                if ($this->_request->getParam('raw') === 'true') {
+                    $new['_raw'] = $line_item;
+                }
+
                 $new_line_items[] = $new;
             }
             $item['lineitems'] = $new_line_items;  
             $items[$key]        = $item;                              
 	    }    	    
         return $items;    
+	}
+
+    /**
+     * @param \Magento\Sales\Model\Order\Item|\Magento\Quote\Model\Quote\Item\AbstractItem $item
+     * @return mixed
+     * @see \Magento\Weee\Block\Item\Price\Renderer::getTotalAmount
+     */
+    protected function calculateLineItemTotal($item)
+    {
+        // just in case getItemById() returned null
+        if (!$item) {
+            return null;
+        }
+        
+        $totalAmount = $item->getRowTotal()
+            - $item->getDiscountAmount()
+            + $item->getTaxAmount()
+            + $item->getDiscountTaxCompensationAmount()
+            + $this->weeeHelper->getRowWeeeTaxInclTax($item);
+
+        return $totalAmount;
 	}
 	
 	protected function replaceIdWithIncrementId($items)
