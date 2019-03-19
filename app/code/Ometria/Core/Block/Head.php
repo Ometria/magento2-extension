@@ -1,6 +1,7 @@
 <?php
 namespace Ometria\Core\Block;
 use stdClass;
+use Magento\Store\Model\ScopeInterface;
 
 class Head extends \Magento\Framework\View\Element\Template
 {
@@ -61,7 +62,10 @@ class Head extends \Magento\Framework\View\Element\Template
     
     public function getAPIKey()
     {
-        return $this->scopeConfig->getValue('ometria/general/apikey');
+        return $this->scopeConfig->getValue(
+            'ometria/general/apikey',
+            ScopeInterface::SCOPE_STORE
+        );
     }
     
     public function isUnivarEnabled()
