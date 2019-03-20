@@ -1,5 +1,8 @@
 <?php
 namespace Ometria\Core\Helper;
+
+use Magento\Store\Model\ScopeInterface;
+
 class MageConfig
 {
     protected $scopeConfig;
@@ -12,19 +15,17 @@ class MageConfig
     {
         $parts = explode('/', $path);
         $top   = array_shift($parts);
-        $config = $this->scopeConfig->getValue($top);
+        $config = $this->scopeConfig->getValue(
+            $top,
+            ScopeInterface::SCOPE_STORE
+        );
 
-        if($config === null)
-        {
+        if($config === null) {
             return null;
         }
 
-        // $parts = explode('/',$path);
-        
-        foreach($parts as $part)
-        {
-            if(!array_key_exists($part, $config))
-            {
+        foreach($parts as $part) {
+            if(!array_key_exists($part, $config)) {
                 return null;
             }
             $config = $config[$part];

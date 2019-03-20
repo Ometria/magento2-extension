@@ -1,12 +1,16 @@
 <?php
 namespace Ometria\Api\Helper;
+
+use Magento\Store\Model\ScopeInterface;
 use Ometria\Api\Controller\V1\Get\Settings;
 
 class Config
 {
     const CONFIG_TOP                = 'ometria';
     const CONFIG_TOP_ABANDONEDCARTS = 'ometria_abandonedcarts';
+
     protected $scopeConfig;
+
     public function __construct(\Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig)
     {
         $this->scopeConfig = $scopeConfig;
@@ -15,7 +19,10 @@ class Config
     public function get($path=null, $top=null)
     {
         $top = $top ? $top : self::CONFIG_TOP;
-        $config = $this->scopeConfig->getValue($top);
+        $config = $this->scopeConfig->getValue(
+            $top,
+            ScopeInterface::SCOPE_STORE
+        );
         if($config === null)
         {
             return null;
