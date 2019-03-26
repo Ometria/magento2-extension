@@ -20,6 +20,8 @@ class OrderIds extends Base
     const UPDATED_BEFORE   = 'updated_before';
     const SINCE_CONDITION  = 'gteq';
     const BEFORE_CONDITION = 'lteq';
+    const CURRENT_PAGE     = 'current_page';
+    const PAGE_SIZE        = 'page_size';
 
     /** @var OrderCollectionFactory */
     private $orderCollectionFactory;
@@ -82,10 +84,19 @@ class OrderIds extends Base
     private function getOrderCollection()
     {
         $collection = $this->orderCollectionFactory->create();
+
         $collection->addAttributeToSelect(OrderInterface::ENTITY_ID);
         $collection->addAttributeToSelect(OrderInterface::INCREMENT_ID);
         $collection->addAttributeToSelect(OrderInterface::CREATED_AT);
         $collection->addAttributeToSelect(OrderInterface::UPDATED_AT);
+
+        if ($pageSize = $this->getRequestParam(self::PAGE_SIZE)) {
+            $collection->setPageSize($pageSize);
+        }
+
+        if ($currentPage = $this->getRequestParam(self::CURRENT_PAGE)) {
+            $collection->setCurPage($currentPage);
+        }
 
         return $collection;
     }
