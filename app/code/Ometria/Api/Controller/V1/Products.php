@@ -197,14 +197,6 @@ class Products extends Base
             $this->addFilterGroupToCollection($group, $collection);
         }
 
-        $page_size = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
-        $page_size = $page_size ? $page_size : 100;
-        $collection->setPageSize($page_size);
-
-        $current_page = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
-        $current_page = $current_page ? $current_page : 1;
-        $collection->setCurPage($current_page);
-
         if ($this->getRequest()->getParam('product_store')){
             $collection->setStoreId($this->getRequest()->getParam('product_store'));
         }
@@ -218,7 +210,15 @@ class Products extends Base
 
         $this->addProductParentIdToCollection($collection);
 
-        $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
+        $page_size = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
+        $page_size = $page_size ? $page_size : 100;
+        $collection->setPageSize($page_size);
+
+        $current_page = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
+        $current_page = $current_page ? $current_page : 1;
+        $collection->setCurPage($current_page);
+
+        $items = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
 
         if($this->_request->getParam('listing') === 'true')
         {
@@ -256,7 +256,21 @@ class Products extends Base
             'left'
         );
 
-        /*
+        /**
+         * The getCurPage() call here fixes a bug where adding a GROUP BY
+         * clears the OFFSET from the query used to find the last page number
+         * resulting in current_page not working. This call essentially
+         * pre-caches the COUNT query result before the group by is added (this
+         * is safe as the query used to find the last page number adds a
+         * DISTINCT clause on the entity_id, so matches the GROUP BY count)
+         *
+         * @see https://github.com/magento/magento2/issues/4767
+         * @see vendor/magento/framework/Data/Collection.php:257
+         * @see vendor/magento/module-catalog/Model/ResourceModel/Product/Collection.php:1129
+         */
+        $collection->getCurPage();
+
+        /**
          * Group by product entity_id to prevent duplicate rows
          * if simples have been assigned to multiple configurables
          */
