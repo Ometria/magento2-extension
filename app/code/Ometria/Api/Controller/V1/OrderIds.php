@@ -152,7 +152,7 @@ class OrderIds extends Base
      */
     private function getStoreFilterId()
     {
-        if ($this->getRequestParam(self::STORE_ID)) {
+        if ($this->getRequestParam(self::STORE_ID) !== null) {
             $storeId = (int) $this->getRequestParam(self::STORE_ID);
         } else {
             $storeId = $this->storeManager->getStore()->getId();
