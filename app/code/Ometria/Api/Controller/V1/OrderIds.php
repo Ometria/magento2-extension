@@ -10,21 +10,27 @@ use Magento\Framework\Exception\InputException;
 use Magento\Sales\Api\Data\OrderInterface;
 use Magento\Sales\Model\ResourceModel\Order\CollectionFactory as OrderCollectionFactory;
 use Magento\Sales\Model\ResourceModel\Order\Collection as OrderCollection;
+use Magento\Store\Model\StoreManagerInterface;
 use Ometria\Api\Controller\V1\Base;
 
 class OrderIds extends Base
 {
+    const STORE_ID         = 'store_id';
     const CREATED_SINCE    = 'created_since';
     const CREATED_BEFORE   = 'created_before';
     const UPDATED_SINCE    = 'updated_since';
     const UPDATED_BEFORE   = 'updated_before';
     const SINCE_CONDITION  = 'gteq';
     const BEFORE_CONDITION = 'lteq';
+    const EQUAL_CONDITION  = 'eq';
     const CURRENT_PAGE     = 'current_page';
     const PAGE_SIZE        = 'page_size';
 
     /** @var OrderCollectionFactory */
     private $orderCollectionFactory;
+
+    /** @var StoreManagerInterface */
+    private $storeManager;
 
     /** @var JsonFactory */
     private $resultJsonFactory;
@@ -32,17 +38,20 @@ class OrderIds extends Base
     /**
      * @param Context $context
      * @param OrderCollectionFactory $orderCollectionFactory
+     * @param StoreManagerInterface $storeManager
      * @param JsonFactory $resultJsonFactory
      */
     public function __construct(
         Context $context,
         OrderCollectionFactory $orderCollectionFactory,
+        StoreManagerInterface $storeManager,
         JsonFactory $resultJsonFactory
     )
     {
         parent::__construct($context);
 
         $this->orderCollectionFactory = $orderCollectionFactory;
+        $this->storeManager = $storeManager;
         $this->resultJsonFactory = $resultJsonFactory;
     }
 
@@ -122,6 +131,9 @@ class OrderIds extends Base
                 self::BEFORE_CONDITION => $this->formatDate(
                     $this->getRequestParam(self::UPDATED_BEFORE)
                 )
+            ],
+            OrderInterface::STORE_ID => [
+                self::EQUAL_CONDITION => $this->getStoreFilterId()
             ]
         ];
     }
@@ -133,6 +145,20 @@ class OrderIds extends Base
     private function getRequestParam($key)
     {
         return $this->getRequest()->getParam($key, null);
+    }
+
+    /**
+     * @return int
+     */
+    private function getStoreFilterId()
+    {
+        if ($this->getRequestParam(self::STORE_ID)) {
+            $storeId = (int) $this->getRequestParam(self::STORE_ID);
+        } else {
+            $storeId = $this->storeManager->getStore()->getId();
+        }
+
+        return $storeId;
     }
 
     /**
