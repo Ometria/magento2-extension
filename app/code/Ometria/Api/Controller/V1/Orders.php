@@ -228,7 +228,7 @@ class Orders extends Base
                 $children_skus             = array_map(function($item){
                     return $item['sku'];
                 }, $line_item['children']);
-                                                    
+
                 $new["variant_id"]        = implode(',', $children_ids);
                 $new["variant_sku"]      = implode(',', $children_skus);                
 
@@ -236,7 +236,7 @@ class Orders extends Base
                 $new["quantity"]          = $line_item['parent']['qty_ordered'];
                 $new["unit_price"]        = $line_item['parent']['price'];
                 $new["subtotal"]          = $line_item['parent']['row_total'];
-                $new["discount"]          = '-' . $line_item['parent']['discount_amount'];
+                $new["discount"]          = $this->formatLineItemDiscount($line_item['parent']['discount_amount']);
                 $new["discount_percent"]  = $line_item['parent']['discount_percent'];
                 $new["tax"]               = $line_item['parent']['tax_amount'];
                 $new["tax_percent"]       = $line_item['parent']['tax_percent'];
@@ -255,6 +255,15 @@ class Orders extends Base
 	    }    	    
         return $items;    
 	}
+
+    /**
+     * Format the line item discount to only show negative when needed
+     * @param $amount
+     * @return string
+     */
+	private function formatLineItemDiscount($amount) {
+	    return (int) $amount > 0 ? sprintf('-%s', $amount) : $amount;
+    }
 
     /**
      * @param \Magento\Sales\Model\Order\Item|\Magento\Quote\Model\Quote\Item\AbstractItem $item
