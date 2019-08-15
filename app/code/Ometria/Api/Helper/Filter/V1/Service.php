@@ -46,82 +46,80 @@ class Service
     
     public function applyFilertsToSearchCriteria($searchCriteria)
     {
-        $groups        = [];
-
-        //entity ids
-        $fullAction = $this->request->getFullActionName();
-        $ids = $this->request->getParam('ids');
-
+        $groups = [];
         $groups = array_merge($groups, $this->applyFilertsToSearchCriteriaEntityId($searchCriteria));
 
-        //website ids
-        $ids = $this->request->getParam('website_ids');
-        if($ids)
-        {
-            $ids = is_array($ids) ? $ids : [$ids];        
-            $group_ids = $this->createSingleFilterFilterGroup('website_ids', $ids, 'in');
-            $groups[]      = $group_ids;
+        $website_ids = $this->request->getParam('website_ids');
+        if($website_ids) {
+            $website_ids = is_array($website_ids) ? $website_ids : [$website_ids];
+            $groups[] = $this->createSingleFilterFilterGroup(
+                'website_ids',
+                $website_ids,
+                'in'
+            );
         }
         
         //store ids
         $store_ids = $this->request->getParam('stores');
-        if($store_ids)
-        {
-            $store_ids = is_array($store_ids) ? $store_ids : [$store_ids];        
-            $group_stores = $this->createSingleFilterFilterGroup('store_id', $store_ids, 'in');
-            $groups[]  = $group_stores;
+        if($store_ids) {
+            $store_ids = is_array($store_ids) ? $store_ids : [$store_ids];
+            $groups[] = $this->createSingleFilterFilterGroup(
+                'store_id',
+                $store_ids,
+                'in'
+            );
         }
-                                
-        //updated_since
-        $updated_since = $this->request->getParam('updated_since');
-        if($updated_since)
-        {
-            $updated_since = date('Y-m-d H:i:s',strToTime($updated_since));
-            $group_updated = $this->createSingleFilterFilterGroup('updated_at', $updated_since, 'gt');
-            $groups[]      = $group_updated;
-        }
-        
-        //created_since
+
         $created_since = $this->request->getParam('created_since');
-        if($created_since)
-        {
-            $updated_since = date('Y-m-d H:i:s',strToTime($created_since));
-            $group_created = $this->createSingleFilterFilterGroup('created_at', $created_since, 'gt');
-            $groups[]      = $group_created;        
+        if($created_since) {
+            $created_since = date('Y-m-d H:i:s', strToTime($created_since));
+            $groups[] = $this->createSingleFilterFilterGroup(
+                'created_at',
+                $created_since,
+                'gt'
+            );
         }
-         
-        //updated_since
-        $updated_since = $this->request->getParam('updated_before');
-        if($updated_since)
-        {
-            $updated_since = date('Y-m-d H:i:s',strToTime($updated_since));
-            $group_updated = $this->createSingleFilterFilterGroup('updated_at', $updated_since, 'lt');
-            $groups[]      = $group_updated;
+
+        $created_before = $this->request->getParam('created_before');
+        if($created_before) {
+            $created_before = date('Y-m-d H:i:s', strToTime($created_before));
+            $groups[] = $this->createSingleFilterFilterGroup(
+                'created_at',
+                $created_before,
+                'lt'
+            );
         }
-        
-        //created_since
-        $created_since = $this->request->getParam('created_before');
-        if($created_since)
-        {
-            $updated_since = date('Y-m-d H:i:s',strToTime($created_since));
-            $group_created = $this->createSingleFilterFilterGroup('created_at', $created_since, 'lt');
-            $groups[]      = $group_created;        
-        }         
+
+        $updated_since = $this->request->getParam('updated_since');
+        if($updated_since) {
+            $updated_since = date('Y-m-d H:i:s', strToTime($updated_since));
+            $groups[] = $this->createSingleFilterFilterGroup(
+                'updated_at',
+                $updated_since,
+                'gt'
+            );
+        }
+
+        $updated_before = $this->request->getParam('updated_before');
+        if($updated_before) {
+            $updated_before = date('Y-m-d H:i:s', strToTime($updated_before));
+            $groups[] = $this->createSingleFilterFilterGroup(
+                'updated_at',
+                $updated_before,
+                'lt'
+            );
+        }
                  
         //product_type
         $product_type = $this->request->getParam('product_type');
-        if($product_type === 'parent')
-        {
-            //$group_configurable = $this->createSingleFilterFilterGroup('type_id', 'configurable', 'eq');        
-            //$groups[]      = $group_configurable;  
+        if($product_type === 'parent') {
             $groups[] = $this->createSingleFilterFilterGroup(
                 'visibility', 
                 [   \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_CATALOG,
                     \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH], 
                 'in');
         }
-        if($product_type === 'variant')
-        {
+        if($product_type === 'variant') {
             //$group_simple = $this->createSingleFilterFilterGroup('type_id', 'simple', 'eq');        
             //$groups[]      = $group_simple;          
             $groups[] = $this->createSingleFilterFilterGroup(
@@ -129,11 +127,9 @@ class Service
                 [\Magento\Catalog\Model\Product\Visibility::VISIBILITY_NOT_VISIBLE], 
                 'in');            
         }
-                              
-                              
+
         $rule_id = $this->request->getParam('rule_id');
-        if($rule_id)
-        {
+        if($rule_id) {
             $group_rule_id = $this->createSingleFilterFilterGroup(
                 'rule_id', $rule_id, 'eq');
             $groups[]      = $group_rule_id;         
