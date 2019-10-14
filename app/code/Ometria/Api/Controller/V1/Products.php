@@ -504,7 +504,6 @@ class Products extends Base
                     $store_currency
                 );
             } catch (\Exception $e) {
-                $a = true;
                 // Allow the "undefined rate" exception and return the price as is if no rate has been setup.
             }
         }
