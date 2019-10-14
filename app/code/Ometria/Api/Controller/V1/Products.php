@@ -1,5 +1,8 @@
 <?php
 namespace Ometria\Api\Controller\V1;
+
+use Magento\CatalogInventory\Api\StockRegistryInterface;
+use Magento\Framework\Exception\LocalizedException;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
 use \Ometria\Api\Controller\V1\Base;
 class Products extends Base
@@ -26,6 +29,9 @@ class Products extends Base
     protected $directoryHelper;
     protected $storeUrlHelper;
 
+    /** @var StockRegistryInterface */
+    private $stockRegistry;
+
     protected $storeIdCache=false;
 
     /**
@@ -51,8 +57,8 @@ class Products extends Base
         \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Framework\App\ResourceConnection $resourceConnection,
         \Magento\Directory\Helper\Data $directoryHelper,
-        \Ometria\Api\Helper\StoreUrl $storeUrlHelper
-
+        \Ometria\Api\Helper\StoreUrl $storeUrlHelper,
+        StockRegistryInterface $stockRegistry
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -73,6 +79,7 @@ class Products extends Base
 		$this->resourceConnection         = $resourceConnection;
 		$this->directoryHelper            = $directoryHelper;
 		$this->storeUrlHelper             = $storeUrlHelper;
+        $this->stockRegistry              = $stockRegistry;
 	}
 
 	protected function getArrayKey($array, $key)
@@ -146,6 +153,7 @@ class Products extends Base
         }
 
         $tmp = $this->appendPricing($tmp['id'], $tmp);
+        $tmp = $this->appendStock($tmp['id'], $tmp);
 
         if (isset($item['store_listings'])) {
             $tmp['store_listings'] = $item['store_listings'];
@@ -470,6 +478,24 @@ class Products extends Base
         return $item;
     }
 
+    /**
+     * @param $productId
+     * @param $item
+     * @return mixed
+     * @throws LocalizedException
+     */
+    private function appendStock($productId, $item)
+    {
+        $websiteId = $this->storeManager->getWebsite()->getId();
+        $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
+        if (isset($stockItem['is_in_stock'])) {
+            $item['is_in_stock'] = $stockItem['is_in_stock'];
+        }
+        if (isset($stockItem['qty'])) {
+            $item['qty'] = (float) $stockItem['qty'];
+        }
+        return $item;
+    }
 
     protected function getProductPrice(
         $product_id,
