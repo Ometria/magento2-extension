@@ -1,5 +1,8 @@
 <?php
 namespace Ometria\Api\Controller\V1;
+
+use Magento\CatalogInventory\Api\StockRegistryInterface;
+use Magento\Framework\Exception\LocalizedException;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
 use \Ometria\Api\Controller\V1\Base;
 class Products extends Base
@@ -26,6 +29,9 @@ class Products extends Base
     protected $directoryHelper;
     protected $storeUrlHelper;
 
+    /** @var StockRegistryInterface */
+    private $stockRegistry;
+
     protected $storeIdCache=false;
 
     /**
@@ -51,8 +57,8 @@ class Products extends Base
         \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Framework\App\ResourceConnection $resourceConnection,
         \Magento\Directory\Helper\Data $directoryHelper,
-        \Ometria\Api\Helper\StoreUrl $storeUrlHelper
-
+        \Ometria\Api\Helper\StoreUrl $storeUrlHelper,
+        StockRegistryInterface $stockRegistry
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -73,6 +79,7 @@ class Products extends Base
 		$this->resourceConnection         = $resourceConnection;
 		$this->directoryHelper            = $directoryHelper;
 		$this->storeUrlHelper             = $storeUrlHelper;
+        $this->stockRegistry              = $stockRegistry;
 	}
 
 	protected function getArrayKey($array, $key)
@@ -146,6 +153,7 @@ class Products extends Base
         }
 
         $tmp = $this->appendPricing($tmp['id'], $tmp);
+        $tmp = $this->appendStock($tmp['id'], $tmp);
 
         if (isset($item['store_listings'])) {
             $tmp['store_listings'] = $item['store_listings'];
@@ -424,7 +432,7 @@ class Products extends Base
                 'image_url' => $this->getBaseImageUrl() . $this->getCustomAttribute($item,$this->getImageUrlKey())
                 );
 
-            $tmp = $this->appendPricing($id, $tmp, $store_currency, $base_currency);
+            $tmp = $this->appendPricing($id, $tmp, $storeId, $base_currency, $store_currency);
 
             $store_listings[$id][$storeId] = $tmp;
         }
@@ -432,61 +440,96 @@ class Products extends Base
         return $store_listings;
     }
 
-    protected function appendPricing($product_id, $item, $store_currency=null, $base_currency=null){
-
+    /**
+     * @param $product_id
+     * @param $item
+     * @param null $storeId
+     * @param null $base_currency
+     * @param null $store_currency
+     * @return mixed
+     */
+    protected function appendPricing($product_id, $item, $storeId = null, $base_currency = null, $store_currency = null)
+    {
         $store_price = $this->getProductPrice(
             $product_id,
-            $item,
+            $storeId,
             \Magento\Catalog\Pricing\Price\RegularPrice::PRICE_CODE,
-            $store_currency,
-            $base_currency);
+            $base_currency,
+            $store_currency
+        );
+
+        if ($store_price) {
+            $item['price'] = $store_price;
+        }
 
         $store_special_price = $this->getProductPrice(
             $product_id,
-            $item,
+            $storeId,
             \Magento\Catalog\Pricing\Price\SpecialPrice::PRICE_CODE,
-            $store_currency,
-            $base_currency);
+            $base_currency,
+            $store_currency
+        );
 
-        $item['price'] = $store_price;
+        if ($store_special_price) {
+            $item['special_price'] = $store_special_price;
+        }
 
         if($this->_request->getParam('final_price') === 'true') {
             $store_final_price = $this->getProductPrice(
                 $product_id,
-                $item,
+                $storeId,
                 \Magento\Catalog\Pricing\Price\FinalPrice::PRICE_CODE,
-                $store_currency,
-                $base_currency);
+                $base_currency,
+                $store_currency
+            );
 
-            $item['final_price'] = $store_final_price;
-        }
-
-        if ($store_special_price) {
-            $item['special_price'] = $store_special_price;
-            //$item['special_price_dt_from'] = null;
-            //$item['special_price_dt_to'] = null;
+            if ($store_final_price) {
+                $item['final_price'] = $store_final_price;
+            }
         }
 
         return $item;
     }
 
+    /**
+     * @param $productId
+     * @param $item
+     * @return mixed
+     * @throws LocalizedException
+     */
+    private function appendStock($productId, $item)
+    {
+        $websiteId = $this->storeManager->getWebsite()->getId();
+        $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
+        if (isset($stockItem['is_in_stock'])) {
+            $item['is_in_stock'] = $stockItem['is_in_stock'];
+        }
+        if (isset($stockItem['qty'])) {
+            $item['qty'] = (float) $stockItem['qty'];
+        }
+        return $item;
+    }
 
     protected function getProductPrice(
         $product_id,
-        $item,
+        $storeId,
         $price_code,
-        $store_currency=null,
-        $base_currency=null
-    ){
-        $product = $this->productRepository->getById($product_id);
-        $price   = $product->getPriceInfo()->getPrice($price_code)->getValue();
+        $base_currency = null,
+        $store_currency = null
+    ) {
+        $product = $this->productRepository->getById($product_id, false, $storeId);
+        $price = $product->getPriceInfo()->getPrice($price_code)->getValue();
 
-        if ($store_currency && $base_currency){
-            $price = $this->directoryHelper->currencyConvert(
-                $price,
-                $base_currency,
-                $store_currency
+        if ($store_currency && $base_currency) {
+            try {
+                $price = $this->directoryHelper->currencyConvert(
+                    $price,
+                    $base_currency,
+                    $store_currency
                 );
+            } catch (\Exception $e) {
+                // Allow the "undefined rate" exception and return the price as is if no rate has been setup.
+            }
         }
 
         return $price;
