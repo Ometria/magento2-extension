@@ -1,17 +1,32 @@
-<?php if($this->isUnivarEnabled()): ?> 
-    <script type="text/javascript">
+<?php if ($this->isUnivarEnabled()): ?>
+    <script>
             window.ometria = window.ometria || {};
             window.ometria.raw_data = <?php echo json_encode($this->getDataLayer()) ?>;
     </script>
-<?php endif; ?> 
-<script type="text/javascript">
-    (function(){
-        var url=window.location.protocol+"//cdn.ometria.com/tags/<?php echo $this->getAPIKey() ?>.js";
-        setTimeout(function(){
-            var sc=document.createElement('script');
-            sc.src=url;
-            sc.setAttribute('async','true');
-            document.getElementsByTagName("head")[0].appendChild(sc);
-        },50);
-    })();
+<?php endif; ?>
+<script>
+    require([
+        'jquery'
+    ], function ($) {
+        $(function () {
+            var url=window.location.protocol+"//cdn.ometria.com/tags/<?php echo $this->getAPIKey() ?>.js";
+            setTimeout(function(){
+                var sc=document.createElement('script');
+                sc.src=url;
+                sc.setAttribute('async','true');
+                document.getElementsByTagName("head")[0].appendChild(sc);
+            },50);
+
+            $(document).on('updateOmetriaProductVariant', function (event, selectedProductId) {
+                // Check Ometria API is avaialable and product mapping is available
+                if (typeof window.ometria.init === 'function') {
+                    if (window.ometria.raw_data.product_map[selectedProductId]) {
+                        // Update data layer and call Ometria init function
+                        window.ometria.raw_data.data = window.ometria.raw_data.product_map[selectedProductId];
+                        window.ometria.init();
+                    }
+                }
+            });
+        });
+    });
 </script>
