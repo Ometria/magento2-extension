@@ -1,35 +1,48 @@
 <?php
-namespace Ometria\Core\Helper; 
-use Magento\Framework\App\Helper\AbstractHelper; 
-use Magento\Framework\App\Helper\Context; 
+namespace Ometria\Core\Helper;
 
-class Product extends AbstractHelper 
+use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Framework\App\Helper\Context;
+use Magento\Framework\Api\SearchCriteriaBuilder;
+use Magento\Catalog\Api\ProductRepositoryInterface;
+use Magento\Catalog\Api\Data\ProductInterface;
+use Magento\Catalog\Model\Product\Attribute\Source\Status;
+use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
+use Ometria\Core\Helper\Config as ConfigHelper;
+
+class Product extends AbstractHelper
 {
-    protected $helperMageConfig;
-    protected $helperConfig;
+    /** @var ConfigHelper */
+    private $helperConfig;
 
+    /** @var ProductRepositoryInterface */
+    private $productRepository;
+
+    /** @var SearchCriteriaBuilder */
+    private $searchCriteriaBuilder;
+
+    /**
+     * @param Context $context
+     * @param ProductRepositoryInterface $productRepository
+     * @param SearchCriteriaBuilder $searchCriteriaBuilder
+     * @param ConfigHelper $helperConfig
+     */
     public function __construct(
         Context $context,
-        \Ometria\Core\Helper\MageConfig $helperMageConfig,
-        \Ometria\Core\Helper\Config $helperConfig        
-    )
-    {
-        $this->helperMageConfig = $helperMageConfig; 
-        $this->helperConfig = $helperConfig;            
+        ProductRepositoryInterface $productRepository,
+        SearchCriteriaBuilder $searchCriteriaBuilder,
+        ConfigHelper $helperConfig
+    ) {
+        $this->productRepository = $productRepository;
+        $this->searchCriteriaBuilder = $searchCriteriaBuilder;
+        $this->helperConfig = $helperConfig;
         return parent::__construct($context);
-    }
-
-    
-    public function isSkuMode(){           
-        //return Mage::getStoreConfig('ometria/advanced/productmode')=='sku';
-        return $this->helperMageConfig->get('ometria/advanced/productmode')=='sku';
     }
 
     public function getIdentifierForProduct($product) {
         if (!$product) return null;
 
-
-        if ($this->isSkuMode()) {
+        if ($this->helperConfig->isSkuMode()) {
             return $product->getSku();
         } else {
             return $product->getId();
@@ -38,7 +51,7 @@ class Product extends AbstractHelper
 
     public function getIdentifiersForProducts($products) {
 
-        $is_sku_mode = $this->isSkuMode();
+        $is_sku_mode = $this->helperConfig->isSkuMode();
 
         $ret = array();
         foreach($products as $product){
@@ -55,7 +68,7 @@ class Product extends AbstractHelper
 
     public function convertProductIdsIfNeeded($ids){
 
-        if (!$this->isSkuMode()) {
+        if (!$this->helperConfig->isSkuMode()) {
             return $ids;
         }
 
@@ -84,7 +97,7 @@ class Product extends AbstractHelper
     public function getProductByIdentifier($id){
         $product_model = Mage::getModel('catalog/product');
 
-        if ($this->isSkuMode()){
+        if ($this->helperConfig->isSkuMode()){
             return $product_model->load($product_model->getIdBySku($id));
         } else {
             return $product_model->load($id);
@@ -97,7 +110,74 @@ class Product extends AbstractHelper
      */
     public function getProductImageUrl($product)
     {
+        if ($product->getTypeId() == Configurable::TYPE_CODE) {
+            return $this->getPreferredProductImageUrl($product);
+        }
+
         return $product->getMediaGalleryImages()->getFirstItem()->getUrl();
+    }
+
+    /**
+     * @param ProductInterface $product
+     * @return mixed
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
+     */
+    public function getPreferredProductImageUrl(ProductInterface $product)
+    {
+        // Ensure this is a configurable product
+        if ($product->getTypeId() != Configurable::TYPE_CODE) {
+            throw new \Exception("Preferred product image is available for configurable products only");
+        }
+
+        // Use configurable's image if allowed and one is present
+        if ($this->helperConfig->canUseConfigurableImage() && $product->getMediaGalleryImages()->getSize() > 0) {
+            return $this->getProductImageUrl($product);
+        }
+
+        // Use preferred product logic if configured
+        $preferredProductAttribute = $this->helperConfig->getPreferredProductAttribute();
+        if ($preferredProductAttribute) {
+            // Load preferred product variant if SKU is defined for this product
+            $preferredProductSku = $product->getData($preferredProductAttribute);
+            if ($preferredProductSku) {
+                // Try to use image of preferred product variant if it has one and is enabled and in stock
+                $preferredProduct = $this->productRepository->get($preferredProductSku);
+                if ($preferredProduct->isSalable() && $preferredProduct->getMediaGalleryImages()->getSize() > 0) {
+                    return $this->getProductImageUrl($preferredProduct);
+                }
+            }
+
+            // If preferred product is not set, has no stock or has no image then try to use any enabled, in-stock variant with an image
+            $variant = $this->getActiveInStockVariantWithImage($product);
+            if ($variant) {
+                return $this->getProductImageUrl($variant);
+            }
+        }
+
+        // Default to using the configurable product's image, whether it has one or not
+        return $product->getMediaGalleryImages()->getFirstItem()->getUrl();
+    }
+
+    /**
+     * Find a child product which is enabled, in stock and has an image
+     * @param ProductInterface $product
+     * @return ProductInterface | bool
+     */
+    private function getActiveInStockVariantWithImage(ProductInterface $product)
+    {
+        $childProducts = $product->getTypeInstance()
+            ->getUsedProductCollection($product)
+            ->addAttributeToFilter('is_saleable', 1)
+            ->addMediaGalleryData();
+
+        // Can't filter by has image, so loop and return first product with an image
+        foreach ($childProducts  as $childProduct) {
+            if ($childProduct->getMediaGalleryImages()->getSize() > 0) {
+                return $childProduct;
+            }
+        }
+
+        return false;
     }
 
     /**

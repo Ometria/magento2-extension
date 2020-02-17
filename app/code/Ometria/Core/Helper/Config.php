@@ -1,23 +1,22 @@
 <?php
-namespace Ometria\Core\Helper; 
-use Magento\Framework\App\Helper\AbstractHelper; 
-use Magento\Framework\App\Helper\Context; 
-class Config extends AbstractHelper 
+namespace Ometria\Core\Helper;
+use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Framework\App\Helper\Context;
+class Config extends AbstractHelper
 {
     protected $coreHelperMageConfig;
     protected $logger;
-    
+
     public function __construct(
         Context $context,
         \Ometria\Core\Helper\MageConfig $coreHelperMageConfig
-//         \Psr\Log\LoggerInterface $logger       
     )
     {
-        $this->coreHelperMageConfig = $coreHelperMageConfig;    
+        $this->coreHelperMageConfig = $coreHelperMageConfig;
         $this->logger               = $context->getLogger();
         return parent::__construct($context);
     }
-    
+
     public function isEnabled() {
         return $this->coreHelperMageConfig->get('ometria/general/enabled');
     }
@@ -54,5 +53,25 @@ class Config extends AbstractHelper
     public function log($message, $level = \Psr\Log\LogLevel::DEBUG) {
         $this->logger->log($level, $message);
         // Mage::log($message, $level, "ometria.log");
+    }
+
+    public function isSkuMode(){
+        return $this->coreHelperMageConfig->get('ometria/advanced/productmode')=='sku';
+    }
+
+    /**
+     * @return bool
+     */
+    public function canUseConfigurableImage()
+    {
+        return (bool) $this->coreHelperMageConfig->get('ometria/advanced/use_configurable_image');
+    }
+
+    /**
+     * @return string
+     */
+    public function getPreferredProductAttribute()
+    {
+        return (string) $this->coreHelperMageConfig->get('ometria/advanced/preferred_product_attribute');
     }
 }

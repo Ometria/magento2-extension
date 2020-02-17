@@ -8,14 +8,10 @@ use Magento\Framework\Option\ArrayInterface;
 
 class PreferredProduct implements ArrayInterface
 {
-    /**
-     * @var SearchCriteriaBuilder
-     */
+    /** @var SearchCriteriaBuilder */
     private $searchCriteriaBuilder;
 
-    /**
-     * @var ProductAttributeRepositoryInterface
-     */
+    /** @var ProductAttributeRepositoryInterface */
     private $attributeRepository;
 
     /**
@@ -54,10 +50,10 @@ class PreferredProduct implements ArrayInterface
     {
         $searchCriteria = $this->searchCriteriaBuilder->create();
 
-        $attributeRepository = $this->attributeRepository->getList(
+        $attributeList = $this->attributeRepository->getList(
             $searchCriteria
         );
 
-        return $attributeRepository->getItems();
+        return $attributeList->getItems();
     }
 }
