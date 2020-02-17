@@ -4,6 +4,7 @@ namespace Ometria\Core\Helper;
 use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
 use Magento\Framework\Api\SearchCriteriaBuilder;
+use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
@@ -26,6 +27,7 @@ class Product extends AbstractHelper
      * @param ProductRepositoryInterface $productRepository
      * @param SearchCriteriaBuilder $searchCriteriaBuilder
      * @param ConfigHelper $helperConfig
+     *
      */
     public function __construct(
         Context $context,
@@ -108,21 +110,28 @@ class Product extends AbstractHelper
      * @param \Magento\Catalog\Model\Product $product
      * @return mixed
      */
-    public function getProductImageUrl($product)
+    public function getProductImageUrl($product, $imageId = 'image')
     {
         if ($product->getTypeId() == Configurable::TYPE_CODE) {
-            return $this->getPreferredProductImageUrl($product);
+            return $this->getPreferredProductImageUrl($product, $imageId);
         }
 
-        return $product->getMediaGalleryImages()->getFirstItem()->getUrl();
+        // Return the relevant image URL for the requested image type (image, small_image, thumbnail, etc)
+        $attribute = $product->getResource()->getAttribute($imageId);
+        if ($product->getData($imageId) && $attribute) {
+            return $attribute->getFrontend()->getUrl($product);
+        }
+
+        return null;
     }
 
     /**
      * @param ProductInterface $product
-     * @return mixed
-     * @throws \Magento\Framework\Exception\NoSuchEntityException
+     * @param $imageId
+     * @return mixed|null
+     * @throws \Exception
      */
-    public function getPreferredProductImageUrl(ProductInterface $product)
+    private function getPreferredProductImageUrl(ProductInterface $product, $imageId)
     {
         // Ensure this is a configurable product
         if ($product->getTypeId() != Configurable::TYPE_CODE) {
@@ -130,8 +139,8 @@ class Product extends AbstractHelper
         }
 
         // Use configurable's image if allowed and one is present
-        if ($this->helperConfig->canUseConfigurableImage() && $product->getMediaGalleryImages()->getSize() > 0) {
-            return $this->getProductImageUrl($product);
+        if ($this->helperConfig->canUseConfigurableImage() && $product->getData($imageId)) {
+            return $this->getProductImageUrl($product, $imageId);
         }
 
         // Use preferred product logic if configured
@@ -140,22 +149,37 @@ class Product extends AbstractHelper
             // Load preferred product variant if SKU is defined for this product
             $preferredProductSku = $product->getData($preferredProductAttribute);
             if ($preferredProductSku) {
+                try {
+                    // Try to load the defined preferred product variant
+                    $preferredProduct = $this->productRepository->get($preferredProductSku);
+                }
+                catch (NoSuchEntityException $e) {
+                    // Prevent error if the preferred product no longer exists
+                    $preferredProduct = false;
+                }
+
                 // Try to use image of preferred product variant if it has one and is enabled and in stock
-                $preferredProduct = $this->productRepository->get($preferredProductSku);
-                if ($preferredProduct->isSalable() && $preferredProduct->getMediaGalleryImages()->getSize() > 0) {
-                    return $this->getProductImageUrl($preferredProduct);
+                if ($preferredProduct && $preferredProduct->isSalable() && $preferredProduct->getData($imageId)) {
+                    return $this->getProductImageUrl($preferredProduct, $imageId);
                 }
             }
 
-            // If preferred product is not set, has no stock or has no image then try to use any enabled, in-stock variant with an image
-            $variant = $this->getActiveInStockVariantWithImage($product);
-            if ($variant) {
-                return $this->getProductImageUrl($variant);
+            // If preferred product is not set, has no stock or has no image then try to use any enabled, in-stock
+            // variant with an image as the preferred product instead
+            $preferredProduct = $this->getActiveInStockVariantWithImage($product);
+            if ($preferredProduct) {
+                return $this->getProductImageUrl($preferredProduct, $imageId);
             }
         }
 
-        // Default to using the configurable product's image, whether it has one or not
-        return $product->getMediaGalleryImages()->getFirstItem()->getUrl();
+        // Default to using the configurable product's image
+        $attribute = $product->getResource()->getAttribute($imageId);
+        if ($product->getData($imageId) && $attribute) {
+            return $attribute->getFrontend()->getUrl($product);
+        }
+
+        // No valid image could be found
+        return null;
     }
 
     /**

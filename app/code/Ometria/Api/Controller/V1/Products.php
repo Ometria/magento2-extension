@@ -26,7 +26,6 @@ class Products extends Base
     protected $searchCriteriaBuilder;
     protected $priceRender;
     protected $productFactory;
-    protected $catalogProductMediaConfig;
     protected $resourceConnection;
     protected $request;
     protected $directoryHelper;
@@ -66,7 +65,6 @@ class Products extends Base
 		\Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
         \Magento\Catalog\Api\ProductAttributeRepositoryInterface $metadataServiceInterface,
-        \Magento\Catalog\Model\Product\Media\Config $catalogProductMediaConfig,
         \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Framework\App\ResourceConnection $resourceConnection,
         \Magento\Directory\Helper\Data $directoryHelper,
@@ -89,7 +87,6 @@ class Products extends Base
 		$this->dataObjectProcessor        = $dataObjectProcessor;
 		$this->storeManager               = $storeManager;
 		$this->productFactory             = $productFactory;
-		$this->catalogProductMediaConfig  = $catalogProductMediaConfig;
 		$this->resourceConnection         = $resourceConnection;
 		$this->directoryHelper            = $directoryHelper;
 		$this->storeUrlHelper             = $storeUrlHelper;
@@ -102,23 +99,6 @@ class Products extends Base
 	    return array_key_exists($key, $array) ? $array[$key] : null;
 	}
 
-	protected function getCustomAttribute($array, $key)
-	{
-	    $attributes = $this->getArrayKey($array, 'custom_attributes');
-	    if(!$attributes) { return; }
-
-	    $item       = array_filter($attributes, function($item) use ($key){
-	        return $item['attribute_code'] === $key;
-	    });
-	    $item = array_shift($item);
-
-	    if($item)
-	    {
-	        return $item['value'];
-	    }
-	    return null;
-	}
-
 	protected function getImageUrlKey()
 	{
 	    $key = $this->getRequest()->getParam('product_image');
@@ -129,30 +109,15 @@ class Products extends Base
 	    return 'image';
 	}
 
-	protected function getBaseImageUrl($store_id=false)
-	{
-	    $store = $this->storeManager->getStore();
-	    if($store_id)
-	    {
-    	    $store = $this->storeManager->getStore($store_id);
-	    }
-        $baseUrl = 	$store->getBaseUrl(
-                \Magento\Framework\UrlInterface::URL_TYPE_MEDIA) .
-        $this->catalogProductMediaConfig->getBaseMediaPath();
-        return $baseUrl;
-	}
-
 	protected function serializeItem($item)
 	{
         $tmp = Helper::getBlankArray();
-
-        $image_path = $this->getCustomAttribute($item,$this->getImageUrlKey());
 
         $tmp['id']          = strval($this->getArrayKey($item, 'id'));
         $tmp['title']       = $this->getArrayKey($item, 'name');
         $tmp['sku']         = $this->getArrayKey($item, 'sku');
         $tmp['url']         = $this->getArrayKey($item, 'url');
-        $tmp['image_url']   = $image_path ? $this->getBaseImageUrl() . $image_path : null;
+        $tmp['image_url']   = $this->getArrayKey($item, 'image_url');
         $tmp['attributes']  = [];
         $tmp['is_active']   = $this->getArrayKey($item, 'status') !== \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_DISABLED;
         $tmp['stores']      = $this->getArrayKey($item, 'store_ids');
@@ -244,7 +209,11 @@ class Products extends Base
             $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
         }
 
-        $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
+        $items = $this->apiHelperServiceFilterable->processList(
+            $collection,
+            'Magento\Catalog\Api\Data\ProductInterface',
+            $this->getRequest()->getParam('product_image', 'image')
+        );
 
         if($this->_request->getParam('listing') === 'true')
         {
@@ -254,9 +223,9 @@ class Products extends Base
                 // pass
             }
         }
-        
+
         $this->prepareChildParentRelationships($items);
-        
+
         $items      = array_map(function($item){
             return $this->serializeItem($item);
         }, $items);
@@ -367,10 +336,10 @@ class Products extends Base
         }
 
         $ret = array();
-        foreach($items  as $item){
-            $id = $item['id'];
-            $item['store_listings'] = isset($store_listings[$id]) ? array_values($store_listings[$id]) : array();
-            $ret[] = $item;
+        foreach($items as $itemData) {
+            $id = $itemData['id'];
+            $itemData['store_listings'] = isset($store_listings[$id]) ? array_values($store_listings[$id]) : array();
+            $ret[] = $itemData;
         }
 
         return $ret;
@@ -392,7 +361,11 @@ class Products extends Base
                 ->setStoreId($storeId)
                 ->addAttributeToFilter('entity_id', array('in' => $productIds));
 
-        $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
+        $items = $this->apiHelperServiceFilterable->processList(
+            $collection,
+            'Magento\Catalog\Api\Data\ProductInterface',
+            $this->getRequest()->getParam('product_image', 'image')
+        );
 
         $base_currency = $store->getBaseCurrency()->getCode();
         $store_currency = $store->getDefaultCurrency()->getCode();
@@ -409,7 +382,7 @@ class Products extends Base
                 'store_currency' => $store_currency,
                 'visibility' => $item['visibility'],
                 'status' => $item['status'],
-                'image_url' => $this->getBaseImageUrl() . $this->getCustomAttribute($item,$this->getImageUrlKey())
+                'image_url' => $item['image_url']
                 );
 
             $tmp = $this->appendPricing($id, $tmp, $storeId, $base_currency, $store_currency);
@@ -549,7 +522,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_super_link'),
@@ -559,9 +532,9 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
-        
+
         $result = $connection->fetchAll($select);
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['parent_id'];
@@ -573,7 +546,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\Bundle\Model\ResourceModel\Selection::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -582,7 +555,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_bundle_selection'),
@@ -592,7 +565,7 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest selections first so the iterator will end with the most recent link 
+            // order by the oldest selections first so the iterator will end with the most recent link
             ->order('selection_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -606,7 +579,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\GroupedProduct\Model\ResourceModel\Product\Link::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -615,7 +588,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_link'),
@@ -629,7 +602,7 @@ class Products extends Base
                 'link_type_id = ?',
                 \Magento\GroupedProduct\Model\ResourceModel\Product\Link::LINK_TYPE_GROUPED
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -647,7 +620,7 @@ class Products extends Base
     protected function getVariantParentId($item)
     {
         $productId = $this->getArrayKey($item, 'id');
-        
+
         // if the product can be viewed individually, it should not be treated as a variant
         $visibleInSiteVisibilities = [
             \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_CATALOG,
