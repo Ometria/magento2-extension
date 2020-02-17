@@ -12,6 +12,7 @@
 				<ping>1</ping>
 				<debug>0</debug>
 				<productmode>id</productmode>
+                <use_configurable_image>0</use_configurable_image>
 				<unique_id></unique_id>
 			</advanced>
 		</ometria>
