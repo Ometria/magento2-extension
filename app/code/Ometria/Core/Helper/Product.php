@@ -191,7 +191,7 @@ class Product extends AbstractHelper
     {
         $childProducts = $product->getTypeInstance()
             ->getUsedProductCollection($product)
-            ->addAttributeToFilter('is_saleable', 1)
+            ->addAttributeToFilter('is_saleable', ['eq' => 1])
             ->addMediaGalleryData();
 
         // Can't filter by has image, so loop and return first product with an image
