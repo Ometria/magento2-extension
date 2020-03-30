@@ -191,13 +191,17 @@ class Product extends AbstractHelper
     {
         $childProducts = $product->getTypeInstance()
             ->getUsedProductCollection($product)
-            ->addAttributeToFilter('is_saleable', ['eq' => 1])
-            ->addMediaGalleryData();
+            ->addAttributeToFilter('is_saleable', ['eq' => 1]);
 
-        // Can't filter by has image, so loop and return first product with an image
-        foreach ($childProducts  as $childProduct) {
-            if ($childProduct->getMediaGalleryImages()->getSize() > 0) {
-                return $childProduct;
+        if ($childProducts) {
+            // Add media gallery data to collection
+            $childProducts->addMediaGalleryData();
+
+            // Can't filter by has image, so loop and return first product with an image
+            foreach ($childProducts as $childProduct) {
+                if ($childProduct->getMediaGalleryImages()->getSize() > 0) {
+                    return $childProduct;
+                }
             }
         }
 
