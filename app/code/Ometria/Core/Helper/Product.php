@@ -107,12 +107,15 @@ class Product extends AbstractHelper
     }
 
     /**
-     * @param \Magento\Catalog\Model\Product $product
-     * @return mixed
+     * @param $product
+     * @param string $imageId
+     * @param bool $usePreferredProduct
+     * @return mixed|null
+     * @throws \Exception
      */
-    public function getProductImageUrl($product, $imageId = 'image')
+    public function getProductImageUrl($product, $imageId = 'image', $usePreferredProduct = true)
     {
-        if ($product->getTypeId() == Configurable::TYPE_CODE) {
+        if ($usePreferredProduct && $product->getTypeId() == Configurable::TYPE_CODE) {
             return $this->getPreferredProductImageUrl($product, $imageId);
         }
 
@@ -138,9 +141,9 @@ class Product extends AbstractHelper
             throw new \Exception("Preferred product image is available for configurable products only");
         }
 
-        // Use configurable's image if allowed and one is present
+        // Use the configurable's image if allowed and one is present
         if ($this->helperConfig->canUseConfigurableImage() && $product->getData($imageId)) {
-            return $this->getProductImageUrl($product, $imageId);
+            return $this->getProductImageUrl($product, $imageId, false);
         }
 
         // Use preferred product logic if configured
@@ -160,7 +163,7 @@ class Product extends AbstractHelper
 
                 // Try to use image of preferred product variant if it has one and is enabled and in stock
                 if ($preferredProduct && $preferredProduct->isSalable() && $preferredProduct->getData($imageId)) {
-                    return $this->getProductImageUrl($preferredProduct, $imageId);
+                    return $this->getProductImageUrl($preferredProduct, $imageId, false);
                 }
             }
 
@@ -168,7 +171,7 @@ class Product extends AbstractHelper
             // variant with an image as the preferred product instead
             $preferredProduct = $this->getActiveInStockVariantWithImage($product);
             if ($preferredProduct) {
-                return $this->getProductImageUrl($preferredProduct, $imageId);
+                return $this->getProductImageUrl($preferredProduct, $imageId, false);
             }
         }
 
