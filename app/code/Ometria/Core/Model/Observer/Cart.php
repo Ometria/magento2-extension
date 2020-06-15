@@ -59,6 +59,12 @@ class Cart
         
         // $cart = Mage::getModel('checkout/cart')->getQuote();
         $cart = $this->cartModel->getQuote();
+
+        // For newly created carts, reload the model to get created_at value added by database
+        if ($cart->getCreatedAt() == null) {
+            $cart = $cart->load($cart->getId());
+        }
+
         $cart_token = substr(md5($cart->getCreatedAt().$cart->getId()),0,12);
 
         $command = array(
