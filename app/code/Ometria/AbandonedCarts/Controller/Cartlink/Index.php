@@ -102,6 +102,7 @@ class Index extends \Magento\Framework\App\Action\Action
             $this->checkoutSession->setQuoteId($quote->getId());           
             $data = $this->session->getVisitorData();
             $data['quote_id'] = $quote->getId();
+            $data['last_visit_at'] = $data['last_visit_at'] ?? (new \DateTime())->format(\Magento\Framework\Stdlib\DateTime::DATETIME_PHP_FORMAT);
             $this->session->setVisitorData($data);
             $this->visitor->setData($data)->save();
                                       
