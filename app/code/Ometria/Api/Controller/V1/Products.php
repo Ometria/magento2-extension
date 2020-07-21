@@ -254,9 +254,9 @@ class Products extends Base
                 // pass
             }
         }
-        
+
         $this->prepareChildParentRelationships($items);
-        
+
         $items      = array_map(function($item){
             return $this->serializeItem($item);
         }, $items);
@@ -340,34 +340,35 @@ class Products extends Base
         }
     }
 
-    protected function addStoreListingToItems(
-        $items
-    ){
+    protected function addStoreListingToItems($items)
+    {
         $stores = $this->storeManager->getStores();
         $store_id_lookup = array();
-        foreach($stores as $store){
+
+        foreach ($stores as $store) {
             $id = $store->getId();
             $store_id_lookup[$id] = $store;
         }
 
         $all_store_ids = array();
         $all_product_ids = array();
-        foreach($items as &$item){
+
+        foreach ($items as $item) {
             $all_product_ids[] = $item['id'];
-            foreach($item['store_ids'] as $store_id){
+            foreach ($item['store_ids'] as $store_id) {
                 $all_store_ids[$store_id] = $store_id;
             }
         }
 
-
         $store_listings = array();
-        foreach($all_store_ids as $store_id){
+        foreach ($all_store_ids as $store_id) {
             $store = $store_id_lookup[$store_id];
             $store_listings = $this->getProductListingsForStore($store, $all_product_ids, $store_listings);
         }
 
         $ret = array();
-        foreach($items  as $item){
+
+        foreach ($items as $item) {
             $id = $item['id'];
             $item['store_listings'] = isset($store_listings[$id]) ? array_values($store_listings[$id]) : array();
             $ret[] = $item;
@@ -549,7 +550,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_super_link'),
@@ -559,9 +560,9 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
-        
+
         $result = $connection->fetchAll($select);
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['parent_id'];
@@ -573,7 +574,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\Bundle\Model\ResourceModel\Selection::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -582,7 +583,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_bundle_selection'),
@@ -592,7 +593,7 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest selections first so the iterator will end with the most recent link 
+            // order by the oldest selections first so the iterator will end with the most recent link
             ->order('selection_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -606,7 +607,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\GroupedProduct\Model\ResourceModel\Product\Link::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -615,7 +616,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_link'),
@@ -629,7 +630,7 @@ class Products extends Base
                 'link_type_id = ?',
                 \Magento\GroupedProduct\Model\ResourceModel\Product\Link::LINK_TYPE_GROUPED
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -647,7 +648,7 @@ class Products extends Base
     protected function getVariantParentId($item)
     {
         $productId = $this->getArrayKey($item, 'id');
-        
+
         // if the product can be viewed individually, it should not be treated as a variant
         $visibleInSiteVisibilities = [
             \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_CATALOG,
