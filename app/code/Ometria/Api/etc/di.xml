@@ -3,9 +3,21 @@
     <type name="Magento\Checkout\Controller\Cart\CouponPost">
         <plugin name="ometria_api_magento_checkout_controller_cart_couponpost" type="Ometria\Api\Plugin\Magento\Checkout\Controller\Cart\CouponPost"/>
     </type>
-    
+
     <type name="Ometria\Api\Controller\V1\Base">
-        <plugin name="ometria_api_controller_v1_base" 
-                type="Ometria\Api\Plugin\BaseController"/>    
+        <plugin name="ometria_api_controller_v1_base"
+                type="Ometria\Api\Plugin\BaseController"/>
+    </type>
+
+    <type name="Ometria\Api\Controller\V1\Base">
+        <arguments>
+            <argument name="logger" xsi:type="object">ometriaLogger</argument>
+        </arguments>
+    </type>
+
+    <type name="Ometria\Api\Plugin\BaseController">
+        <arguments>
+            <argument name="logger" xsi:type="object">ometriaLogger</argument>
+        </arguments>
     </type>
 </config>
