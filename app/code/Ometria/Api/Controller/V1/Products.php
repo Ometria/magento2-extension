@@ -1,10 +1,12 @@
 <?php
 namespace Ometria\Api\Controller\V1;
 
+use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\CatalogInventory\Api\StockRegistryInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
 use Ometria\Api\Controller\V1\Base;
+use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
 
 class Products extends Base
 {
@@ -17,7 +19,7 @@ class Products extends Base
     protected $attributesFactory;
     protected $helperCategory;
     protected $response;
-    protected $productCollection;
+    protected $productCollectionFactory;
     protected $helperOmetriaApiFilter;
     protected $searchCriteria;
     protected $dataObjectProcessor;
@@ -52,7 +54,7 @@ class Products extends Base
     protected $childParentBundleProductIds = [];
     protected $childParentGroupedProductIds = [];
 
-	public function __construct(
+    public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
 		\Ometria\Api\Helper\Service\Filterable\Service\Product $apiHelperServiceFilterable,
@@ -61,7 +63,7 @@ class Products extends Base
 		\Ometria\Api\Helper\Category $helperCategory,
 		\Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,
 		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
-		\Magento\Catalog\Model\ResourceModel\Product\Collection $productCollection,
+		\Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productCollectionFactory,
 		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor,
 		\Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
@@ -83,7 +85,7 @@ class Products extends Base
 		$this->attributesFactory          = $attributesFactory;
 		$this->helperCategory             = $helperCategory;
 		$this->response                   = $context->getResponse();
-		$this->productCollection          = $productCollection;
+		$this->productCollectionFactory   = $productCollectionFactory;
 		$this->helperOmetriaApiFilter     = $helperOmetriaApiFilter;
 		$this->searchCriteria             = $searchCriteria;
 		$this->dataObjectProcessor        = $dataObjectProcessor;
@@ -96,6 +98,100 @@ class Products extends Base
         $this->productTypeFactory         = $productTypeFactory;
         $this->stockRegistry              = $stockRegistry;
 	}
+
+    public function execute()
+    {
+        $collection = $this->getProductCollection();
+
+        if ($this->_request->getParam('count') != null) {
+            $data = $this->getCountData($collection);
+        } else {
+            $data = $this->getItemsData($collection);
+        }
+
+        return $this->resultJsonFactory->create()->setData($data);
+    }
+
+    /**
+     * @return ProductCollection
+     * @throws LocalizedException
+     */
+    private function getProductCollection()
+    {
+        $collection = $this->productCollectionFactory->create();
+
+        $searchCriteria = $this->helperOmetriaApiFilter
+            ->applyFilertsToSearchCriteria($this->searchCriteria);
+
+        $this->setCurrentStoreIfStoreIdFilterExists($searchCriteria);
+
+        foreach ($this->metadataService->getList($this->searchCriteriaBuilder->create())->getItems() as $metadata) {
+            $collection->addAttributeToSelect($metadata->getAttributeCode());
+        }
+
+        foreach ($searchCriteria->getFilterGroups() as $group) {
+            $this->addFilterGroupToCollection($group, $collection);
+        }
+
+        if ($this->getRequest()->getParam('product_store')) {
+            $collection->setStoreId($this->getRequest()->getParam('product_store'));
+        }
+
+        $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
+
+        if ($this->needsVisibilityJoin) {
+            $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
+        }
+
+        $pageSize = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
+        $pageSize = $pageSize ? $pageSize : 100;
+        $collection->setPageSize($pageSize);
+
+        $currentPage = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
+        $currentPage = $currentPage ? $currentPage : 1;
+        $collection->setCurPage($currentPage);
+
+        return $collection;
+    }
+
+    /**
+     * @param ProductCollection $collection
+     * @return array
+     */
+    private function getCountData(ProductCollection $collection)
+    {
+        return [
+            'count' => $collection->count()
+        ];
+    }
+
+    /**
+     * @param $collection
+     * @return array
+     */
+    private function getItemsData($collection)
+    {
+        $items = $this->apiHelperServiceFilterable->processList(
+            $collection,
+            ProductInterface::class
+        );
+
+        if ($this->_request->getParam('listing') === 'true') {
+            try {
+                $items = $this->addStoreListingToItems($items, $this->resourceConnection);
+            } catch (\Exception $e) {
+                // pass
+            }
+        }
+
+        $this->prepareChildParentRelationships($items);
+
+        $items = array_map(function ($item) {
+            return $this->serializeItem($item);
+        }, $items);
+
+        return array_values($items);
+    }
 
 	protected function getArrayKey($array, $key)
 	{
@@ -209,68 +305,6 @@ class Products extends Base
 
         return $tmp;
 	}
-
-	protected function getItemsForJson()
-	{
-        $searchCriteria = $this->helperOmetriaApiFilter
-            ->applyFilertsToSearchCriteria($this->searchCriteria);
-        $this->setCurrentStoreIfStoreIdFilterExists($searchCriteria);
-
-        $collection = $this->productCollection;
-        foreach ($this->metadataService->getList($this->searchCriteriaBuilder->create())->getItems() as $metadata) {
-            $collection->addAttributeToSelect($metadata->getAttributeCode());
-        }
-
-        foreach ($searchCriteria->getFilterGroups() as $group) {
-            $this->addFilterGroupToCollection($group, $collection);
-        }
-
-        $page_size = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
-        $page_size = $page_size ? $page_size : 100;
-        $collection->setPageSize($page_size);
-
-        $current_page = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
-        $current_page = $current_page ? $current_page : 1;
-        $collection->setCurPage($current_page);
-
-        if ($this->getRequest()->getParam('product_store')){
-            $collection->setStoreId($this->getRequest()->getParam('product_store'));
-        }
-
-        $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
-
-        if($this->needsVisibilityJoin)
-        {
-            $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
-        }
-
-        $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
-
-        if($this->_request->getParam('listing') === 'true')
-        {
-            try {
-                $items = $this->addStoreListingToItems($items, $this->resourceConnection);
-            } catch (\Exception $e){
-                // pass
-            }
-        }
-        
-        $this->prepareChildParentRelationships($items);
-        
-        $items      = array_map(function($item){
-            return $this->serializeItem($item);
-        }, $items);
-
-        $items = array_values($items);
-        return $items;
-	}
-
-    public function execute()
-    {
-        $items  = $this->getItemsForJson();
-        $result = $this->resultJsonFactory->create();
-        return $result->setData($items);
-    }
 
     protected function setCurrentStoreIfStoreIdFilterExists($searchCriteria)
     {
@@ -549,7 +583,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_super_link'),
@@ -559,9 +593,9 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
-        
+
         $result = $connection->fetchAll($select);
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['parent_id'];
@@ -573,7 +607,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\Bundle\Model\ResourceModel\Selection::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -582,7 +616,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_bundle_selection'),
@@ -592,7 +626,7 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest selections first so the iterator will end with the most recent link 
+            // order by the oldest selections first so the iterator will end with the most recent link
             ->order('selection_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -606,7 +640,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\GroupedProduct\Model\ResourceModel\Product\Link::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -615,7 +649,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_link'),
@@ -629,7 +663,7 @@ class Products extends Base
                 'link_type_id = ?',
                 \Magento\GroupedProduct\Model\ResourceModel\Product\Link::LINK_TYPE_GROUPED
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -647,7 +681,7 @@ class Products extends Base
     protected function getVariantParentId($item)
     {
         $productId = $this->getArrayKey($item, 'id');
-        
+
         // if the product can be viewed individually, it should not be treated as a variant
         $visibleInSiteVisibilities = [
             \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_CATALOG,
