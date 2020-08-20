@@ -101,22 +101,22 @@ class Products extends Base
 
     public function execute()
     {
-        $collection = $this->getProductCollection();
+        $items = $this->getProductItems();
 
         if ($this->_request->getParam('count') != null) {
-            $data = $this->getCountData($collection);
+            $data = $this->getCountData($items);
         } else {
-            $data = $this->getItemsData($collection);
+            $data = $this->getItemsData($items);
         }
 
         return $this->resultJsonFactory->create()->setData($data);
     }
 
     /**
-     * @return ProductCollection
+     * @return array
      * @throws LocalizedException
      */
-    private function getProductCollection()
+    private function getProductItems()
     {
         $collection = $this->productCollectionFactory->create();
 
@@ -151,17 +151,20 @@ class Products extends Base
         $currentPage = $currentPage ? $currentPage : 1;
         $collection->setCurPage($currentPage);
 
-        return $collection;
+        return $this->apiHelperServiceFilterable->processList(
+            $collection,
+            ProductInterface::class
+        );
     }
 
     /**
-     * @param ProductCollection $collection
+     * @param $items
      * @return array
      */
-    private function getCountData(ProductCollection $collection)
+    private function getCountData($items)
     {
         return [
-            'count' => $collection->count()
+            'count' => count($items)
         ];
     }
 
@@ -169,13 +172,8 @@ class Products extends Base
      * @param $collection
      * @return array
      */
-    private function getItemsData($collection)
+    private function getItemsData($items)
     {
-        $items = $this->apiHelperServiceFilterable->processList(
-            $collection,
-            ProductInterface::class
-        );
-
         if ($this->_request->getParam('listing') === 'true') {
             try {
                 $items = $this->addStoreListingToItems($items, $this->resourceConnection);
