@@ -26,7 +26,7 @@ class Types extends Base
 
     public function execute()
     {
-        $collection = $this->getAttributeCollection();
+        $collection = $this->attributeCollectionFactory->create();
 
         if ($this->_request->getParam('count') != null) {
             $data = $this->getCountData($collection);
@@ -35,14 +35,6 @@ class Types extends Base
         }
 
         return $this->resultJsonFactory->create()->setData($data);
-    }
-
-    /**
-     * @return AttributeCollection
-     */
-    private function getAttributeCollection()
-    {
-        return $this->attributeCollectionFactory->create();
     }
 
     /**
@@ -56,15 +48,16 @@ class Types extends Base
         ];
     }
 
-    public function getItemsData()
+    /**
+     * @param $collection
+     * @return array
+     */
+    public function getItemsData($collection)
     {
         $data = [];
 
-        /** @var AttributeCollection $attributeCollection */
-        $attributeCollection = $this->attributeCollectionFactory->create();
-
         /** @var ProductAttributeInterface $attribute */
-        foreach ($attributeCollection as $attribute) {
+        foreach ($collection as $attribute) {
             $data[] = $this->serializeAttribute($attribute);
         }
 
