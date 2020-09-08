@@ -69,4 +69,24 @@ class Config extends AbstractHelper
     {
         $this->logger->error($message);
     }
+
+    public function isSkuMode(){
+        return $this->coreHelperMageConfig->get('ometria/advanced/productmode')=='sku';
+    }
+
+    /**
+     * @return bool
+     */
+    public function canUseConfigurableImage()
+    {
+        return (bool) $this->coreHelperMageConfig->get('ometria/advanced/use_configurable_image');
+    }
+
+    /**
+     * @return string
+     */
+    public function getPreferredProductAttribute()
+    {
+        return (string) $this->coreHelperMageConfig->get('ometria/advanced/preferred_product_attribute');
+    }
 }
