@@ -11,18 +11,18 @@ class Version extends Base
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
-		\Magento\Framework\Module\ResourceInterface $moduleResource 
+		\Magento\Framework\Module\ResourceInterface $moduleResource
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory = $resultJsonFactory;
 		$this->moduleResource     = $moduleResource;
 	}
-	
+
     public function execute()
     {
         $data = Helper::getBlankArray();
 		$result = $this->resultJsonFactory->create();
 		$data['version'] = self::VERSION_STRING . '/' . $this->moduleResource->getDbVersion('Ometria_Api');
 		return $result->setData($data);
-    }    
+    }
 }

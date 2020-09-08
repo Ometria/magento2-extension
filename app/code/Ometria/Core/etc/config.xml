@@ -13,6 +13,8 @@
 				<debug>0</debug>
 				<productmode>id</productmode>
 				<unique_id></unique_id>
+                <override_memory>0</override_memory>
+                <override_execution>0</override_execution>
 			</advanced>
 		</ometria>
 	</default>

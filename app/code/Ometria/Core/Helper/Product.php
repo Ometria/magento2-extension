@@ -1,9 +1,9 @@
 <?php
-namespace Ometria\Core\Helper; 
-use Magento\Framework\App\Helper\AbstractHelper; 
-use Magento\Framework\App\Helper\Context; 
+namespace Ometria\Core\Helper;
+use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Framework\App\Helper\Context;
 
-class Product extends AbstractHelper 
+class Product extends AbstractHelper
 {
     protected $helperMageConfig;
     protected $helperConfig;
@@ -11,16 +11,16 @@ class Product extends AbstractHelper
     public function __construct(
         Context $context,
         \Ometria\Core\Helper\MageConfig $helperMageConfig,
-        \Ometria\Core\Helper\Config $helperConfig        
+        \Ometria\Core\Helper\Config $helperConfig
     )
     {
-        $this->helperMageConfig = $helperMageConfig; 
-        $this->helperConfig = $helperConfig;            
+        $this->helperMageConfig = $helperMageConfig;
+        $this->helperConfig = $helperConfig;
         return parent::__construct($context);
     }
 
-    
-    public function isSkuMode(){           
+
+    public function isSkuMode(){
         //return Mage::getStoreConfig('ometria/advanced/productmode')=='sku';
         return $this->helperMageConfig->get('ometria/advanced/productmode')=='sku';
     }
@@ -37,7 +37,6 @@ class Product extends AbstractHelper
     }
 
     public function getIdentifiersForProducts($products) {
-
         $is_sku_mode = $this->isSkuMode();
 
         $ret = array();

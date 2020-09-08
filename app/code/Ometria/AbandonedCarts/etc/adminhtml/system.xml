@@ -1,26 +1,22 @@
-<config>
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../Config/etc/system_file.xsd">
 	<system>
-<!-- 
-		<tab id="ometria" translate="label" sortOrder="1000">
-			<label>Ometria</label>
-		</tab>
- -->
-		<section id="ometria_abandonedcarts" translate="label" sortOrder="1015" showInDefault="1" showInWebsite="1" showInStore="1">
+		<section id="ometria_abandonedcarts" translate="label" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
 			<label>Cart Abandonment</label>
 			<tab>ometria</tab>
 			<resource>Ometria_Core::config_ometria</resource>
-			<group id="abandonedcarts" translate="label" type="text" sortOrder="1020" showInDefault="1" showInWebsite="0" showInStore="0">
+			<group id="abandonedcarts" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
 				<label>Cart Deeplink Settings</label>
 				<frontend_model>Ometria\AbandonedCarts\Block\System\Config\Form\Fieldset\Modules\Group</frontend_model>
-				<field id="cartpath" translate="label" type="text" sortOrder="1030" showInDefault="1" showInWebsite="0" showInStore="0">
+				<field id="cartpath" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
 					<label>Checkout Cart Path</label>
 					<!-- <default>/checkout/cart</default> -->
 				</field>
-				<field id="enabled" translate="label" type="select" sortOrder="1040" showInDefault="1" showInWebsite="0" showInStore="0">
+				<field id="enabled" translate="label" type="select" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
 					<label>Deeplink enabled</label>
 					<source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
 				</field>
-				<field id="check_token" translate="label" type="select" sortOrder="1050" showInDefault="1" showInWebsite="0" showInStore="0">
+				<field id="check_token" translate="label" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
 					<label>Check Deeplink Token</label>
 					<source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
 				</field>
