@@ -1,13 +1,14 @@
 <?php
 namespace Ometria\Api\Controller\V1;
 
+use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\CatalogInventory\Api\StockRegistryInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
 use Ometria\Api\Controller\V1\Base;
 use Psr\Log\LoggerInterface as PsrLoggerInterface;
-use Magento\Framework\UrlInterface;
 use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
+use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
 
 class Products extends Base
 {
@@ -20,7 +21,7 @@ class Products extends Base
     protected $attributesFactory;
     protected $helperCategory;
     protected $response;
-    protected $productCollection;
+    protected $productCollectionFactory;
     protected $helperOmetriaApiFilter;
     protected $searchCriteria;
     protected $dataObjectProcessor;
@@ -66,7 +67,7 @@ class Products extends Base
 		\Ometria\Api\Helper\Category $helperCategory,
 		\Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,
 		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
-		\Magento\Catalog\Model\ResourceModel\Product\Collection $productCollection,
+		\Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productCollectionFactory,
 		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor,
 		\Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
@@ -88,7 +89,7 @@ class Products extends Base
 		$this->attributesFactory          = $attributesFactory;
 		$this->helperCategory             = $helperCategory;
 		$this->response                   = $context->getResponse();
-		$this->productCollection          = $productCollection;
+		$this->productCollectionFactory   = $productCollectionFactory;
 		$this->helperOmetriaApiFilter     = $helperOmetriaApiFilter;
 		$this->searchCriteria             = $searchCriteria;
 		$this->dataObjectProcessor        = $dataObjectProcessor;
@@ -101,6 +102,128 @@ class Products extends Base
         $this->stockRegistry              = $stockRegistry;
         $this->logger                     = $logger;
 	}
+
+    public function execute()
+    {
+        $items = $this->getProductItems();
+
+        if ($this->_request->getParam('count') != null) {
+            $data = $this->getCountData($items);
+        } else {
+            $data = $this->getItemsData($items);
+        }
+
+        return $this->resultJsonFactory->create()->setData($data);
+    }
+
+    /**
+     * @return array
+     * @throws LocalizedException
+     */
+    private function getProductItems()
+    {
+        $collection = $this->productCollectionFactory->create();
+
+        $searchCriteria = $this->helperOmetriaApiFilter
+            ->applyFilertsToSearchCriteria($this->searchCriteria);
+
+        $this->setCurrentStoreIfStoreIdFilterExists($searchCriteria);
+
+        foreach ($this->metadataService->getList($this->searchCriteriaBuilder->create())->getItems() as $metadata) {
+            $collection->addAttributeToSelect($metadata->getAttributeCode());
+        }
+
+        foreach ($searchCriteria->getFilterGroups() as $group) {
+            $this->addFilterGroupToCollection($group, $collection);
+        }
+
+        if ($this->getRequest()->getParam('product_store')) {
+            $collection->setStoreId($this->getRequest()->getParam('product_store'));
+        }
+
+        $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
+
+        if ($this->needsVisibilityJoin) {
+            $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
+        }
+
+        $pageSize = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
+        $pageSize = $pageSize ? $pageSize : 100;
+        $collection->setPageSize($pageSize);
+
+        $currentPage = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
+        $currentPage = $currentPage ? $currentPage : 1;
+        $collection->setCurPage($currentPage);
+
+        return $this->apiHelperServiceFilterable->processList(
+            $collection,
+            ProductInterface::class,
+            $this->getRequest()->getParam('product_image', 'image')
+        );
+    }
+
+    /**
+     * @param $items
+     * @return array
+     */
+    private function getCountData($items)
+    {
+        return [
+            'count' => count($items)
+        ];
+    }
+
+    /**
+     * @param $collection
+     * @return array
+     */
+    private function getItemsData($items)
+    {
+        if ($this->_request->getParam('listing') === 'true') {
+            try {
+                $items = $this->addStoreListingToItems($items, $this->resourceConnection);
+            } catch (\Exception $e) {
+                $this->logger->error(
+                    'Failed to generate Product API listings.',
+                    [
+                        'message' => $e->getMessage(),
+                        'url' => $this->_url->getCurrentUrl(),
+                        'trace' => $e->getTraceAsString()
+                    ]
+                );
+            }
+        }
+
+        try {
+            $this->prepareChildParentRelationships($items);
+        } catch (\Exception $e) {
+            $this->logger->error(
+                'Failed to prepare Product API child/parent relationships.',
+                [
+                    'message' => $e->getMessage(),
+                    'url' => $this->_url->getCurrentUrl(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            );
+        }
+
+        try {
+            $items = array_map(function ($item){
+                return $this->serializeItem($item);
+            }, $items);
+        } catch (\Exception $e) {
+            $this->logger->error(
+                'Failed to serialise Product API items response.',
+                [
+                    'message' => $e->getMessage(),
+                    'url' => $this->_url->getCurrentUrl(),
+                    'trace' => $e->getTraceAsString()
+               ]
+            );
+        }
+
+        return array_values($items);
+    }
 
 	protected function getArrayKey($array, $key)
 	{
@@ -183,104 +306,6 @@ class Products extends Base
 
         return $tmp;
 	}
-
-	protected function getItemsForJson()
-	{
-        $searchCriteria = $this->helperOmetriaApiFilter
-            ->applyFilertsToSearchCriteria($this->searchCriteria);
-        $this->setCurrentStoreIfStoreIdFilterExists($searchCriteria);
-
-        $collection = $this->productCollection;
-        foreach ($this->metadataService->getList($this->searchCriteriaBuilder->create())->getItems() as $metadata) {
-            $collection->addAttributeToSelect($metadata->getAttributeCode());
-        }
-
-        foreach ($searchCriteria->getFilterGroups() as $group) {
-            $this->addFilterGroupToCollection($group, $collection);
-        }
-
-        $page_size = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
-        $page_size = $page_size ? $page_size : 100;
-        $collection->setPageSize($page_size);
-
-        $current_page = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
-        $current_page = $current_page ? $current_page : 1;
-        $collection->setCurPage($current_page);
-
-        if ($this->getRequest()->getParam('product_store')) {
-            $collection->setStoreId($this->getRequest()->getParam('product_store'));
-        }
-
-        $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
-
-        if ($this->needsVisibilityJoin) {
-            $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
-        }
-
-        $items = $this->apiHelperServiceFilterable->processList(
-            $collection,
-            'Magento\Catalog\Api\Data\ProductInterface',
-            $this->getRequest()->getParam('product_image', 'image')
-        );
-
-        if ($this->_request->getParam('listing') === 'true') {
-            try {
-                $items = $this->addStoreListingToItems($items, $this->resourceConnection);
-            } catch (\Exception $e) {
-                $this->logger->error(
-                    'Failed to generate Product API listings.',
-                    [
-                        'message' => $e->getMessage(),
-                        'url' => $this->_url->getCurrentUrl(),
-                        'trace' => $e->getTraceAsString()
-                    ]
-                );
-            }
-        }
-
-        $this->prepareChildParentRelationships($items);
-
-        $items      = array_map(function($item){
-            return $this->serializeItem($item);
-        }, $items);
-
-        try {
-            $this->prepareChildParentRelationships($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to prepare Product API child/parent relationships.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = array_map(function($item){
-                return $this->serializeItem($item);
-            }, $items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to serialise Product API items response.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        return array_values($items);
-    }
-
-    public function execute()
-    {
-        $items  = $this->getItemsForJson();
-        $result = $this->resultJsonFactory->create();
-        return $result->setData($items);
-    }
 
     protected function setCurrentStoreIfStoreIdFilterExists($searchCriteria)
     {

@@ -18,31 +18,154 @@ class Orders extends Base
     /** @var PsrLoggerInterface */
     private $logger;
 
-	public function __construct(
-		\Magento\Framework\App\Action\Context $context,
-		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
-		\Ometria\Api\Helper\Service\Filterable\Service $apiHelperServiceFilterable,
-		\Magento\Sales\Api\OrderRepositoryInterface $orderRepository,
-		\Magento\Sales\Model\ResourceModel\Order\Payment\Collection $paymentsCollection,
-		\Magento\Sales\Model\Order\AddressFactory $salesOrderAddressFactory,
-		\Magento\Sales\Model\ResourceModel\Order\Collection $ordersCollection,
-		\Ometria\Api\Helper\Order\IsValid $orderValidTester,
+    public function __construct(
+        \Magento\Framework\App\Action\Context $context,
+        \Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
+        \Ometria\Api\Helper\Service\Filterable\Service $apiHelperServiceFilterable,
+        \Magento\Sales\Api\OrderRepositoryInterface $orderRepository,
+        \Magento\Sales\Model\ResourceModel\Order\Payment\Collection $paymentsCollection,
+        \Magento\Sales\Model\Order\AddressFactory $salesOrderAddressFactory,
+        \Magento\Sales\Model\ResourceModel\Order\Collection $ordersCollection,
+        \Ometria\Api\Helper\Order\IsValid $orderValidTester,
         \Magento\Weee\Helper\Data $weeeHelper,
         PsrLoggerInterface $logger
-	) {
-		parent::__construct($context);
-		$this->resultJsonFactory           = $resultJsonFactory;
-		$this->apiHelperServiceFilterable  = $apiHelperServiceFilterable;
-		$this->repository                  = $orderRepository;
-		$this->salesOrderAddressFactory    = $salesOrderAddressFactory;
-		$this->paymentsCollection          = $paymentsCollection;
-		$this->ordersCollection            = $ordersCollection;
-		$this->orderValidTester            = $orderValidTester;
-		$this->weeeHelper                  = $weeeHelper;
-        $this->logger                      = $logger;
-	}
+    ) {
+        parent::__construct($context);
+        $this->resultJsonFactory = $resultJsonFactory;
+        $this->apiHelperServiceFilterable = $apiHelperServiceFilterable;
+        $this->repository = $orderRepository;
+        $this->salesOrderAddressFactory = $salesOrderAddressFactory;
+        $this->paymentsCollection = $paymentsCollection;
+        $this->ordersCollection = $ordersCollection;
+        $this->orderValidTester = $orderValidTester;
+        $this->weeeHelper = $weeeHelper;
+        $this->logger = $logger;
+    }
 
-	protected function fixMissingCustomerNames($item)
+    public function execute()
+    {
+        $items = $this->getOrderItems();
+
+        if ($this->_request->getParam('count') != null) {
+            $data = $this->getCountData($items);
+        } else {
+            $data = $this->getItemsData($items);
+        }
+
+        return $this->resultJsonFactory->create()->setData($data);
+    }
+
+    /**
+     * @return array
+     */
+    private function getOrderItems()
+    {
+        try {
+            $items = $this->apiHelperServiceFilterable->createResponse(
+                $this->repository,
+                null
+            );
+        } catch (\Exception $e) {
+            $this->logger->error(
+                'Failed to generate Order API items list from search criteria.',
+                [
+                    'message' => $e->getMessage(),
+                    'url' => $this->_url->getCurrentUrl(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            );
+        }
+
+
+        return $items;
+    }
+
+    /**
+     * @param $items
+     * @return array
+     */
+    private function getCountData($items)
+    {
+        return [
+            'count' => count($items)
+        ];
+    }
+
+    /**
+     * @param $items
+     * @return array
+     */
+    private function getItemsData($items)
+    {
+        try {
+            $items = $this->formatItems($items);
+        } catch (\Exception $e) {
+            $this->logger->error(
+                'Failed to format Order API items.',
+                [
+                    'message' => $e->getMessage(),
+                    'url' => $this->_url->getCurrentUrl(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            );
+        }
+
+        try {
+            $items = $this->addPayments($items);
+        } catch (\Exception $e) {
+            $this->logger->error(
+                'Failed to add payment information to Order API items.',
+                [
+                    'message' => $e->getMessage(),
+                    'url' => $this->_url->getCurrentUrl(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            );
+        }
+
+        try {
+            $items = $this->addAddresses($items);
+        } catch (\Exception $e) {
+            $this->logger->error(
+                'Failed to add billing/shipping address information to Order API items.',
+                [
+                    'message' => $e->getMessage(),
+                    'url' => $this->_url->getCurrentUrl(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            );
+        }
+
+        try {
+            $items = $this->addLineItems($items);
+        } catch (\Exception $e) {
+            $this->logger->error(
+                'Failed to add line item information to Order API items.',
+                [
+                    'message' => $e->getMessage(),
+                    'url' => $this->_url->getCurrentUrl(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            );
+        }
+
+        try {
+            $items = $this->replaceIdWithIncrementId($items);
+        } catch (\Exception $e) {
+            $this->logger->error(
+                'Failed to replace Order API items entity ID with increment ID.',
+                [
+                    'message' => $e->getMessage(),
+                    'url' => $this->_url->getCurrentUrl(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            );
+        }
+
+        return $items;
+    }
+
+    protected function fixMissingCustomerNames($item)
 	{
 	    if (!$item['customer']['firstname']) {
 	        $item['customer']['firstname'] = $item['billing_address']['firstname'];
@@ -155,41 +278,41 @@ class Orders extends Base
 	        return $item['id'];
 	    }, $items);
 
-	    $this->paymentsCollection->addFieldToFilter(
+            $this->paymentsCollection->addFieldToFilter(
 	        'parent_id',
 	        ['in' => $order_ids]
-        );
+            );
 
 	    $indexedByParentId = [];
 	    foreach ($this->paymentsCollection as $payment) {
-            $indexedByParentId[(int)$payment->getParentId()] = $payment;
+                $indexedByParentId[(int)$payment->getParentId()] = $payment;
 	    }
 
-        foreach ($items as $key => $item) {
-            if (!array_key_exists((int)$item['id'], $indexedByParentId)) {
-                continue;
+            foreach ($items as $key => $item) {
+                if (!array_key_exists((int)$item['id'], $indexedByParentId)) {
+                    continue;
+                }
+                $item['payment_method'] = $indexedByParentId[$item['id']]->getMethod();
+                $items[$key] = $item;
             }
-            $item['payment_method'] = $indexedByParentId[$item['id']]->getMethod();
-            $items[$key] = $item;
-        }
 
-        return $items;
+            return $items;
 	}
 
 	protected function indexLineItemsByParentAndChild($line_items)
 	{
-        $indexedParentChild = [];
-        foreach ($line_items as $line_item) {
-            if (!$line_item->getParentItemId()) {
-                $indexedParentChild[$line_item->getId()] = [
-                    'parent'   => $line_item->getData(),
-                    'children' => []
-                ];
-                continue;
+            $indexedParentChild = [];
+            foreach ($line_items as $line_item) {
+                if (!$line_item->getParentItemId()) {
+                    $indexedParentChild[$line_item->getId()] = [
+                        'parent'   => $line_item->getData(),
+                        'children' => []
+                    ];
+                    continue;
+                }
+                $indexedParentChild[$line_item->getParentItemId()]['children'][] = $line_item->getData();
             }
-            $indexedParentChild[$line_item->getParentItemId()]['children'][] = $line_item->getData();
-        }
-        return $indexedParentChild;
+            return $indexedParentChild;
 	}
 
 	protected function addLineItems($items)
@@ -201,7 +324,7 @@ class Orders extends Base
 	    $this->ordersCollection->addFieldToFilter(
 	        'entity_id',
 	        ['in' => $order_ids]
-        );
+            );
 
 	    foreach ($items as $key => $item) {
 	        $order = $this->ordersCollection->getItemById($item['id']);
@@ -299,94 +422,4 @@ class Orders extends Base
 
 	    return $items;
 	}
-
-    public function execute()
-    {
-        try {
-            // null used instead of actual type 'Magento\Sales\Api\Data\OrderInterface' here
-            // due to triggering a Notice: Array to string conversion. A bug?
-            $items = $this->apiHelperServiceFilterable->createResponse(
-                $this->repository,
-                null
-            );
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to generate Order API items list from search criteria.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = $this->formatItems($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to format Order API items.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = $this->addPayments($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to add payment information to Order API items.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = $this->addAddresses($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to add billing/shipping address information to Order API items.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = $this->addLineItems($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to add line item information to Order API items.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = $this->replaceIdWithIncrementId($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to replace Order API items entity ID with increment ID.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-		$result = $this->resultJsonFactory->create();
-
-		return $result->setData($items);
-    }
 }
