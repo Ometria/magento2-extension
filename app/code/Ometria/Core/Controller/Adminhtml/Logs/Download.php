@@ -45,10 +45,16 @@ class Download extends Action
                     DirectoryList::VAR_DIR
                 );
             } else {
-                throw new LocalizedException(__('Could not find Ometria log file.'));
+                $this->messageManager->addNotice(
+                    __('Could not find Ometria log file.')->getText()
+                );
+                return $this->resultRedirectFactory->create()->setUrl($this->_redirect->getRefererUrl());
             }
         } catch (Exception $e) {
-            throw new LocalizedException(__('Something went wrong whilst downloading the Ometria log file.'));
+            $this->messageManager->addNotice(
+                __('Something went wrong whilst downloading the Ometria log file.')->getText()
+            );
+            return $this->resultRedirectFactory->create()->setPath($this->_redirect->getRefererUrl());
         }
     }
 }

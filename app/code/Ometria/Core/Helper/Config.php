@@ -4,25 +4,19 @@ namespace Ometria\Core\Helper;
 use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
 use Ometria\Core\Helper\MageConfig;
-use Psr\Log\LoggerInterface as PsrLoggerInterface;
 
 class Config extends AbstractHelper
 {
     /** @var MageConfig */
     private $coreHelperMageConfig;
 
-    /** @var PsrLoggerInterface */
-    private $logger;
-
     public function __construct(
         Context $context,
-        MageConfig $coreHelperMageConfig,
-        PsrLoggerInterface $logger
+        MageConfig $coreHelperMageConfig
     ) {
         parent::__construct($context);
 
         $this->coreHelperMageConfig = $coreHelperMageConfig;
-        $this->logger = $logger;
     }
 
     public function isEnabled()
@@ -65,11 +59,6 @@ class Config extends AbstractHelper
         return $this->isEnabled() && $this->getAPIKey() != "";
     }
 
-    public function log($message)
-    {
-        $this->logger->error($message);
-    }
-
     public function isSkuMode(){
         return $this->coreHelperMageConfig->get('ometria/advanced/productmode')=='sku';
     }
@@ -88,5 +77,14 @@ class Config extends AbstractHelper
     public function getPreferredProductAttribute()
     {
         return (string) $this->coreHelperMageConfig->get('ometria/advanced/preferred_product_attribute');
+    }
+
+    /**
+     * @param $message
+     * @return bool
+     */
+    public function isLogEnabled()
+    {
+        return (bool) $this->coreHelperMageConfig->get('ometria/logs/enabled');
     }
 }
