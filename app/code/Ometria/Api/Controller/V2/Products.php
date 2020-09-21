@@ -288,14 +288,10 @@ class Products extends Action
 
         if ($product->getTypeId() == Configurable::TYPE_CODE) {
             $preferredProduct = $this->getPreferredProduct($product);
-            if ($preferredProduct) {
-                return $this->productHelper->getProductImageUrlV2($product, $imageId, $preferredProduct);
-            } else {
-                return $this->productHelper->getProductImageUrlV2($product, $imageId, true);
-            }
+            return $this->productHelper->getPreferredProductImageUrlV2($product, $imageId, $preferredProduct);
         }
 
-        return $this->productHelper->getProductImageUrlV2($product, $imageId, false);
+        return $this->productHelper->getProductImageUrlV2($product, $imageId);
     }
 
     /**
@@ -316,7 +312,7 @@ class Products extends Action
             }
         }
 
-        return true;
+        return false;
     }
 
     /**

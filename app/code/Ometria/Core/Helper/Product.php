@@ -187,24 +187,15 @@ class Product extends AbstractHelper
     /**
      * @param $product
      * @param string $imageId
-     * @param bool|ProductInterface $preferredProduct
      * @return string|null
      */
-    public function getProductImageUrlV2($product, $imageId = 'image', $preferredProduct = true)
+    public function getProductImageUrlV2($product, $imageId = 'image')
     {
         $imageUrl = null;
 
-        // For configurables, try to get an image from preferred product if possible
-        if ($preferredProduct && $product->getTypeId() == Configurable::TYPE_CODE) {
-            $imageUrl = $this->getPreferredProductImageUrlV2($product, $imageId, $preferredProduct);
-        }
-
-        // Otherwise return the relevant image URL for the requested image type (image, small_image, thumbnail, etc)
-        if ($imageUrl == null) {
-            $attribute = $product->getResource()->getAttribute($imageId);
-            if ($product->getData($imageId) && $attribute) {
-                $imageUrl = (string) $attribute->getFrontend()->getUrl($product);
-            }
+        $attribute = $product->getResource()->getAttribute($imageId);
+        if ($product->getData($imageId) && $attribute) {
+            $imageUrl = (string) $attribute->getFrontend()->getUrl($product);
         }
 
         return $imageUrl;
@@ -213,44 +204,28 @@ class Product extends AbstractHelper
     /**
      * @param ProductInterface $product
      * @param $imageId
-     * @param bool|ProductInterface $preferredProduct
+     * @param false $preferredProduct
      * @return string|null
      */
-    private function getPreferredProductImageUrlV2(ProductInterface $product, $imageId, $preferredProduct)
+    public function getPreferredProductImageUrlV2(ProductInterface $product, $imageId, $preferredProduct = false)
     {
         // Use the configurable's image if allowed and one is present
         if ($this->helperConfig->canUseConfigurableImage() && $product->getData($imageId)) {
-            return $this->getProductImageUrlV2($product, $imageId, false);
-        }
-
-        // If a preferred product was not supplied to the function, try to load one now
-        if (!$preferredProduct instanceof ProductInterface) {
-            $preferredProductAttribute = $this->helperConfig->getPreferredProductAttribute();
-            if ($preferredProductAttribute) {
-                // Load preferred product variant if a SKU is defined for this product
-                $preferredProductSku = $product->getData($preferredProductAttribute);
-                if ($preferredProductSku) {
-                    try {
-                        // Try to load the defined preferred product variant
-                        $preferredProduct = $this->productRepository->get($preferredProductSku);
-                    } catch (NoSuchEntityException $e) {
-                        // Prevent error if the preferred product no longer exists
-                        $preferredProduct = false;
-                    }
-                }
-            }
+            return $this->getProductImageUrlV2($product, $imageId);
         }
 
         // Try to use image of preferred product variant if it has one and is enabled and in stock
-        if ($preferredProduct && $preferredProduct->isSalable() && $preferredProduct->getData($imageId)) {
-            return $this->getProductImageUrlV2($preferredProduct, $imageId, false);
+        if ($preferredProduct &&
+            $preferredProduct->isSalable() &&
+            $preferredProduct->getData($imageId)) {
+            return $this->getProductImageUrlV2($preferredProduct, $imageId);
         }
 
         // If preferred product is not set, has no stock or has no image then try to use any enabled, in-stock
         // variant with an image as the preferred product instead
         $preferredProduct = $this->getActiveInStockVariantWithImage($product);
         if ($preferredProduct) {
-            return $this->getProductImageUrlV2($preferredProduct, $imageId, false);
+            return $this->getProductImageUrlV2($preferredProduct, $imageId);
         }
 
         // No valid preferred product image could be found
