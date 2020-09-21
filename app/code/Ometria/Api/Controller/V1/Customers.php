@@ -1,7 +1,6 @@
 <?php
 namespace Ometria\Api\Controller\V1;
 
-use Psr\Log\LoggerInterface as PsrLoggerInterface;
 use Magento\Customer\Api\Data\CustomerInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Ometria\Api\Helper\Format\V1\Customers as Helper;
@@ -20,9 +19,6 @@ class Customers extends Base
     protected $groupRepository;
     protected $customerGroupNames;
 
-    /** @var PsrLoggerInterface */
-    private $logger;
-
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
@@ -32,8 +28,7 @@ class Customers extends Base
 		\Magento\Newsletter\Model\ResourceModel\Subscriber\Collection $subscriberCollection,
         \Ometria\Api\Helper\CustomerData $customerDataHelper,
         \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
-        \Magento\Customer\Api\GroupRepositoryInterface $groupRepository,
-        PsrLoggerInterface $logger
+        \Magento\Customer\Api\GroupRepositoryInterface $groupRepository
 	) {
 		parent::__construct($context);
 		$this->resultJsonFactory            = $resultJsonFactory;
@@ -44,7 +39,6 @@ class Customers extends Base
 		$this->customerDataHelper           = $customerDataHelper;
 		$this->searchCriteriaBuilder        = $searchCriteriaBuilder;
 		$this->groupRepository              = $groupRepository;
-        $this->logger                      = $logger;
 
 		$this->genderOptions                = $this->customerMetadataInterface
             ->getAttributeMetadata('gender')
@@ -93,46 +87,24 @@ class Customers extends Base
      */
     public function getItemsData($items)
     {
-        try {
-            $subscriberCollection = $this->getSubscriberCollection($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to get Subscriber collection in Customer API.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
+        $subscriberCollection = $this->getSubscriberCollection($items);
 
         $items = array_map(function ($item) use ($subscriberCollection) {
 
             $new = Helper::getBlankArray();
-            try {
-                $new["@type"]           = "contact";
-                $new["id"]              = array_key_exists('id', $item) ? $item['id'] : '';
-                $new["email"]           = array_key_exists('email', $item) ? $item['email'] : '';
-                $new["prefix"]          = array_key_exists('prefix', $item) ? $item['prefix'] : '';
-                $new["firstname"]       = array_key_exists('firstname', $item) ? $item['firstname'] : '';
-                $new["middlename"]      = array_key_exists('middlename', $item) ? $item['middlename'] : '';
-                $new["lastname"]        = array_key_exists('lastname', $item) ? $item['lastname'] : '';
-                $new["gender"]          = $this->customerDataHelper->getGenderLabel($item);
-                $new["date_of_birth"]   = array_key_exists('dob', $item) ? $item['dob'] : '';
-                $new["marketing_optin"] = $this->getMarketingOption($item, $subscriberCollection);
-                $new["country_id"]      = $this->customerDataHelper->getCountryId($item);
-                $new["store_id"]        = array_key_exists('store_id', $item) ? $item['store_id'] : null;
-            } catch (\Exception $e) {
-                $this->logger->error(
-                    'Failed to generate Customer API response.',
-                    [
-                        'message' => $e->getMessage(),
-                        'url' => $this->_url->getCurrentUrl(),
-                        'trace' => $e->getTraceAsString(),
-                        'item' => $item
-                    ]
-                );
-            }
+
+            $new["@type"]           = "contact";
+            $new["id"]              = array_key_exists('id', $item) ? $item['id'] : '';
+            $new["email"]           = array_key_exists('email', $item) ? $item['email'] : '';
+            $new["prefix"]          = array_key_exists('prefix', $item) ? $item['prefix'] : '';
+            $new["firstname"]       = array_key_exists('firstname', $item) ? $item['firstname'] : '';
+            $new["middlename"]      = array_key_exists('middlename', $item) ? $item['middlename'] : '';
+            $new["lastname"]        = array_key_exists('lastname', $item) ? $item['lastname'] : '';
+            $new["gender"]          = $this->customerDataHelper->getGenderLabel($item);
+            $new["date_of_birth"]   = array_key_exists('dob', $item) ? $item['dob'] : '';
+            $new["marketing_optin"] = $this->getMarketingOption($item, $subscriberCollection);
+            $new["country_id"]      = $this->customerDataHelper->getCountryId($item);
+            $new["store_id"]        = array_key_exists('store_id', $item) ? $item['store_id'] : null;
 
             if ($this->_request->getParam('raw') != null) {
                 $new['_raw'] = $item;

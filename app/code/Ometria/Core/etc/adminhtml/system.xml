@@ -63,18 +63,5 @@
                 </field>
 			</group>
 		</section>
-        <section id="ometria_logs" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
-            <label>Logs</label>
-            <tab>ometria</tab>
-            <resource>Ometria_Core::config_ometria</resource>
-            <group id="logs" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
-                <label>Logs</label>
-                <field id="download" translate="button_label" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label/>
-                    <button_label>Download Log File</button_label>
-                    <frontend_model>Ometria\Core\Block\Adminhtml\System\Config\Logs\DownloadButton</frontend_model>
-                </field>
-            </group>
-        </section>
 	</system>
 </config>

@@ -5,7 +5,6 @@ use Magento\Framework\App\Request\Http;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\Controller\Result\Json;
 use Ometria\Api\Helper\Override as OverrideHelper;
-use Psr\Log\LoggerInterface as PsrLoggerInterface;
 
 class BaseController
 {
@@ -15,21 +14,16 @@ class BaseController
     /** @var JsonFactory */
     private $resultJsonFactory;
 
-    /** @var PsrLoggerInterface */
-    private $logger;
-
     /** @var Http */
     private $request;
 
     public function __construct(
         OverrideHelper $overrideHelper,
 		JsonFactory $resultJsonFactory,
-        PsrLoggerInterface $logger,
         Http $request
     ) {
         $this->overrideHelper = $overrideHelper;
         $this->resultJsonFactory = $resultJsonFactory;
-        $this->logger = $logger;
         $this->request = $request;
     }
 
@@ -49,14 +43,7 @@ class BaseController
         try {
             $result = $proceed($request);
         } catch (\Exception $e) {
-            $this->logger->error(
-                'General API dispatch error.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->request->getUriString(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
+            $result = $this->resultJsonFactory->create();
             $result->setData(['error' => $e->getMessage()]);
         }
 
