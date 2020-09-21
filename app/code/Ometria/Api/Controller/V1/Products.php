@@ -155,6 +155,9 @@ class Products extends Base
         $currentPage = $currentPage ? $currentPage : 1;
         $collection->setCurPage($currentPage);
 
+        // Sort by product entity ID for consistency
+        $collection->addAttributeToSort('entity_id', 'asc');
+
         return $this->apiHelperServiceFilterable->processList(
             $collection,
             ProductInterface::class,
@@ -264,8 +267,8 @@ class Products extends Base
             $tmp['_raw'] = $item;
         }
 
-        $tmp = $this->appendPricing($tmp['id'], $tmp);
         $tmp = $this->appendStock($tmp['id'], $tmp);
+        $tmp = $this->appendPricing($tmp['id'], $tmp);
 
         if (isset($item['store_listings'])) {
             $tmp['store_listings'] = $item['store_listings'];
