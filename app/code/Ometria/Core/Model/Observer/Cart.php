@@ -2,7 +2,6 @@
 
 namespace Ometria\Core\Model\Observer;
 use Magento\Framework\Event\Observer;
-use Psr\Log\LoggerInterface as PsrLoggerInterface;
 
 class Cart
 {
@@ -13,9 +12,7 @@ class Cart
     protected $storeManager;
     protected $helperPing;
     protected $helperSession;
-
-    /** @var PsrLoggerInterface */
-    private $logger;
+    protected $helperConfig;
 
     public function __construct(
         \Ometria\Core\Helper\Product $helperProduct,
@@ -26,7 +23,7 @@ class Cart
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Ometria\Core\Helper\Session $helperSession,
         \Ometria\Core\Helper\Ping $helperPing,
-        PsrLoggerInterface $logger
+        \Ometria\Core\Helper\Config $helperConfig
     )
     {
         $this->frontendAreaChecker  = $frontendAreaChecker;
@@ -38,7 +35,6 @@ class Cart
         $this->helperPing           = $helperPing;
         $this->helperSession        = $helperSession;
         $this->helperConfig         = $helperConfig;
-        $this->logger = $logger;
     }
 
     public function basketUpdated(Observer $observer){
@@ -145,8 +141,8 @@ class Cart
                 $command = array('identify', $identify_type, http_build_query($data));
                 $ometria_cookiechannel_helper->addCommand($command, true);
             }
-        } catch(Exception $e) {
-            $this->logger->error($e->getMessage() . ' in ' . __METHOD__);
+        } catch(Exception $e){
+            $this->helperConfig->log($e->getMessage() . ' in ' . __METHOD__);
         }
     }
 

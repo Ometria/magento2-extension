@@ -9,6 +9,7 @@ class Config extends AbstractHelper
 {
     /** @var MageConfig */
     private $coreHelperMageConfig;
+    protected $logger;
 
     public function __construct(
         Context $context,
@@ -17,6 +18,7 @@ class Config extends AbstractHelper
         parent::__construct($context);
 
         $this->coreHelperMageConfig = $coreHelperMageConfig;
+        $this->logger               = $context->getLogger();
     }
 
     public function isEnabled()
@@ -59,6 +61,11 @@ class Config extends AbstractHelper
         return $this->isEnabled() && $this->getAPIKey() != "";
     }
 
+    public function log($message, $level = \Psr\Log\LogLevel::DEBUG)
+    {
+        $this->logger->log($level, $message);
+    }
+
     public function isSkuMode(){
         return $this->coreHelperMageConfig->get('ometria/advanced/productmode')=='sku';
     }
@@ -77,14 +84,5 @@ class Config extends AbstractHelper
     public function getPreferredProductAttribute()
     {
         return (string) $this->coreHelperMageConfig->get('ometria/advanced/preferred_product_attribute');
-    }
-
-    /**
-     * @param $message
-     * @return bool
-     */
-    public function isLogEnabled()
-    {
-        return (bool) $this->coreHelperMageConfig->get('ometria/logs/enabled');
     }
 }

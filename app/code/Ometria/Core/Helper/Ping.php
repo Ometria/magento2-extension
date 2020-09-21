@@ -1,32 +1,25 @@
 <?php
-namespace Ometria\Core\Helper;
-
-use Magento\Framework\App\Helper\AbstractHelper;
-use Magento\Framework\App\Helper\Context;
-use Psr\Log\LoggerInterface as PsrLoggerInterface;
-
-class Ping extends AbstractHelper
+namespace Ometria\Core\Helper; 
+use Magento\Framework\App\Helper\AbstractHelper; 
+use Magento\Framework\App\Helper\Context; 
+class Ping extends AbstractHelper 
 {
+
     const API_HOST = 'trk.ometria.com';
     const API_SOCKET_SCHEMA = 'ssl://';
     const API_PATH = '/ping.php';
     const API_SOCKET_TIMEOUT = 2;
 
     protected $helperConfig;
-
-    /** @var PsrLoggerInterface */
-    private $logger;
-
     public function __construct(
         Context $context,
-        \Ometria\Core\Helper\Config $helperConfig,
-        PsrLoggerInterface $logger
-    ) {
-        $this->helperConfig = $helperConfig;
-        $this->logger = $logger;
+        \Ometria\Core\Helper\Config $helperConfig       
+    )        
+    {
+        $this->helperConfig = $helperConfig;    
         return parent::__construct($context);
     }
-
+    
     public function sendPing($type, $ids, $extra=array(), $store_id=null){
         //$ometriaConfigHelper = Mage::helper('ometria/config');
         $ometriaConfigHelper = $this->helperConfig;
@@ -41,9 +34,9 @@ class Ping extends AbstractHelper
 
         if($ometriaConfigHelper->isDebugMode()) {
             if(is_array($ids)) {
-                $this->logger->debug("Sending ping. Type: ".$type." " . implode(',', $ids));
+                $ometriaConfigHelper->log("Sending ping. Type: ".$type." " . implode(',', $ids));
             } else {
-                $this->logger->debug("Sending ping. Type: ".$type." " . $ids);
+                $ometriaConfigHelper->log("Sending ping. Type: ".$type." " . $ids);
             }
         }
 
@@ -103,16 +96,16 @@ class Ping extends AbstractHelper
                         $response .= fgets($fp, 1024);
                     }
 
-                    $this->logger->debug($response);
+                    $ometriaConfigHelper->log($response);
                 }
 
                 fclose($fp);
             } else {
-                $this->logger->warning("Ping failed: Error $errorNum - $errorStr", Zend_Log::ERR);
+                $ometriaConfigHelper->log("Ping failed: Error $errorNum - $errorStr", Zend_Log::ERR);
                 return false;
             }
         } catch (Exception $e) {
-            $this->logger->error($e->getMessage());
+            $ometriaConfigHelper->log($e->getMessage());
             return false;
         }
 
