@@ -6,7 +6,6 @@ use Magento\CatalogInventory\Api\StockRegistryInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
 use Ometria\Api\Controller\V1\Base;
-use Psr\Log\LoggerInterface as PsrLoggerInterface;
 use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
 use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
 
@@ -55,9 +54,6 @@ class Products extends Base
     protected $childParentBundleProductIds = [];
     protected $childParentGroupedProductIds = [];
 
-    /** @var PsrLoggerInterface */
-    private $logger;
-
     public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
@@ -77,8 +73,7 @@ class Products extends Base
         \Magento\Directory\Helper\Data $directoryHelper,
         \Ometria\Api\Helper\StoreUrl $storeUrlHelper,
         \Magento\Catalog\Model\Product\TypeFactory $productTypeFactory,
-        StockRegistryInterface $stockRegistry,
-        PsrLoggerInterface $logger
+        StockRegistryInterface $stockRegistry
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -100,7 +95,6 @@ class Products extends Base
 		$this->storeUrlHelper             = $storeUrlHelper;
         $this->productTypeFactory         = $productTypeFactory;
         $this->stockRegistry              = $stockRegistry;
-        $this->logger                     = $logger;
 	}
 
     public function execute()
@@ -183,44 +177,15 @@ class Products extends Base
             try {
                 $items = $this->addStoreListingToItems($items, $this->resourceConnection);
             } catch (\Exception $e) {
-                $this->logger->error(
-                    'Failed to generate Product API listings.',
-                    [
-                        'message' => $e->getMessage(),
-                        'url' => $this->_url->getCurrentUrl(),
-                        'trace' => $e->getTraceAsString()
-                    ]
-                );
+                // pass
             }
         }
 
-        try {
-            $this->prepareChildParentRelationships($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to prepare Product API child/parent relationships.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
+        $this->prepareChildParentRelationships($items);
 
-        try {
-            $items = array_map(function ($item){
-                return $this->serializeItem($item);
-            }, $items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to serialise Product API items response.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-               ]
-            );
-        }
+        $items = array_map(function ($item){
+            return $this->serializeItem($item);
+        }, $items);
 
         return array_values($items);
     }
@@ -322,6 +287,7 @@ class Products extends Base
             }
         }
     }
+
     /**
     * Repository interface does not support store or website filtering
     */

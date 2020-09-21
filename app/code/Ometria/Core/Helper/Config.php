@@ -4,25 +4,21 @@ namespace Ometria\Core\Helper;
 use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
 use Ometria\Core\Helper\MageConfig;
-use Psr\Log\LoggerInterface as PsrLoggerInterface;
 
 class Config extends AbstractHelper
 {
     /** @var MageConfig */
     private $coreHelperMageConfig;
-
-    /** @var PsrLoggerInterface */
-    private $logger;
+    protected $logger;
 
     public function __construct(
         Context $context,
-        MageConfig $coreHelperMageConfig,
-        PsrLoggerInterface $logger
+        MageConfig $coreHelperMageConfig
     ) {
         parent::__construct($context);
 
         $this->coreHelperMageConfig = $coreHelperMageConfig;
-        $this->logger = $logger;
+        $this->logger               = $context->getLogger();
     }
 
     public function isEnabled()
@@ -65,9 +61,9 @@ class Config extends AbstractHelper
         return $this->isEnabled() && $this->getAPIKey() != "";
     }
 
-    public function log($message)
+    public function log($message, $level = \Psr\Log\LogLevel::DEBUG)
     {
-        $this->logger->error($message);
+        $this->logger->log($level, $message);
     }
 
     public function isSkuMode(){

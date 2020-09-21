@@ -8,16 +8,4 @@
         <plugin name="ometria_api_controller_v1_base"
                 type="Ometria\Api\Plugin\BaseController"/>
     </type>
-
-    <type name="Ometria\Api\Controller\V1\Base">
-        <arguments>
-            <argument name="logger" xsi:type="object">ometriaLogger</argument>
-        </arguments>
-    </type>
-
-    <type name="Ometria\Api\Plugin\BaseController">
-        <arguments>
-            <argument name="logger" xsi:type="object">ometriaLogger</argument>
-        </arguments>
-    </type>
 </config>

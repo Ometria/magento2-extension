@@ -3,7 +3,6 @@ namespace Ometria\Api\Controller\V1;
 
 use Ometria\Api\Helper\Format\V1\Orders as Helper;
 use Ometria\Api\Controller\V1\Base;
-use Psr\Log\LoggerInterface as PsrLoggerInterface;
 
 class Orders extends Base
 {
@@ -15,9 +14,6 @@ class Orders extends Base
     protected $orderValidTester;
     protected $weeeHelper;
 
-    /** @var PsrLoggerInterface */
-    private $logger;
-
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
         \Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
@@ -27,8 +23,7 @@ class Orders extends Base
         \Magento\Sales\Model\Order\AddressFactory $salesOrderAddressFactory,
         \Magento\Sales\Model\ResourceModel\Order\Collection $ordersCollection,
         \Ometria\Api\Helper\Order\IsValid $orderValidTester,
-        \Magento\Weee\Helper\Data $weeeHelper,
-        PsrLoggerInterface $logger
+        \Magento\Weee\Helper\Data $weeeHelper
     ) {
         parent::__construct($context);
         $this->resultJsonFactory = $resultJsonFactory;
@@ -39,7 +34,6 @@ class Orders extends Base
         $this->ordersCollection = $ordersCollection;
         $this->orderValidTester = $orderValidTester;
         $this->weeeHelper = $weeeHelper;
-        $this->logger = $logger;
     }
 
     public function execute()
@@ -60,22 +54,10 @@ class Orders extends Base
      */
     private function getOrderItems()
     {
-        try {
-            $items = $this->apiHelperServiceFilterable->createResponse(
-                $this->repository,
-                null
-            );
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to generate Order API items list from search criteria.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
+        $items = $this->apiHelperServiceFilterable->createResponse(
+            $this->repository,
+            null
+        );
 
         return $items;
     }
@@ -97,70 +79,11 @@ class Orders extends Base
      */
     private function getItemsData($items)
     {
-        try {
-            $items = $this->formatItems($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to format Order API items.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = $this->addPayments($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to add payment information to Order API items.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = $this->addAddresses($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to add billing/shipping address information to Order API items.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = $this->addLineItems($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to add line item information to Order API items.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
-
-        try {
-            $items = $this->replaceIdWithIncrementId($items);
-        } catch (\Exception $e) {
-            $this->logger->error(
-                'Failed to replace Order API items entity ID with increment ID.',
-                [
-                    'message' => $e->getMessage(),
-                    'url' => $this->_url->getCurrentUrl(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
-        }
+        $items = $this->formatItems($items);
+        $items = $this->addPayments($items);
+        $items = $this->addAddresses($items);
+        $items = $this->addLineItems($items);
+        $items = $this->replaceIdWithIncrementId($items);
 
         return $items;
     }
