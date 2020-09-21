@@ -17,9 +17,6 @@
                 <override_memory>0</override_memory>
                 <override_execution>0</override_execution>
 			</advanced>
-            <logs>
-                <enabled>0</enabled>
-            </logs>
 		</ometria>
 	</default>
 </config>
