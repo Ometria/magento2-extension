@@ -4,11 +4,12 @@ class Service
 {
     const PARAM_PAGE_SIZE = 'page_size';
     const PARAM_CURRENT_PAGE = 'current_page';
-    
+    const PARAM_COUNT = 'count';
+
     protected $searchCriteriaBuilder;
     protected $filterBuilder;
     protected $filterGroupBuilder;
-    
+
     public function __construct(
         \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
         \Magento\Framework\Api\FilterBuilder $filterBuilder,
@@ -21,29 +22,29 @@ class Service
         $this->filterGroupBuilder    = $filterGroupBuilder;
         $this->request               = $request;
     }
-    
+
     protected function applyFilertsToSearchCriteriaEntityId($searchCriteria)
     {
-        $groups        = [];    
+        $groups        = [];
         $fullAction = $this->request->getFullActionName();
         $ids = $this->request->getParam('ids');
-            
+
         if($ids && $fullAction !== 'ometria_api_v1_orders')
         {
-            $ids = is_array($ids) ? $ids : [$ids];        
+            $ids = is_array($ids) ? $ids : [$ids];
             $group_ids = $this->createSingleFilterFilterGroup('entity_id', $ids, 'in');
             $groups[]      = $group_ids;
         }
 
         if($ids && $fullAction === 'ometria_api_v1_orders')
         {
-            $ids = is_array($ids) ? $ids : [$ids];        
+            $ids = is_array($ids) ? $ids : [$ids];
             $group_ids = $this->createSingleFilterFilterGroup('increment_id', $ids, 'in');
             $groups[]      = $group_ids;
-        }    
+        }
         return $groups;
     }
-    
+
     public function applyFilertsToSearchCriteria($searchCriteria)
     {
         $groups = [];
@@ -58,7 +59,7 @@ class Service
                 'in'
             );
         }
-        
+
         //store ids
         $store_ids = $this->request->getParam('stores');
         if($store_ids) {
@@ -109,55 +110,55 @@ class Service
                 'lt'
             );
         }
-                 
+
         //product_type
         $product_type = $this->request->getParam('product_type');
         if($product_type === 'parent') {
             $groups[] = $this->createSingleFilterFilterGroup(
-                'visibility', 
+                'visibility',
                 [   \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_CATALOG,
-                    \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH], 
+                    \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH],
                 'in');
         }
         if($product_type === 'variant') {
-            //$group_simple = $this->createSingleFilterFilterGroup('type_id', 'simple', 'eq');        
-            //$groups[]      = $group_simple;          
+            //$group_simple = $this->createSingleFilterFilterGroup('type_id', 'simple', 'eq');
+            //$groups[]      = $group_simple;
             $groups[] = $this->createSingleFilterFilterGroup(
-                'visibility', 
-                [\Magento\Catalog\Model\Product\Visibility::VISIBILITY_NOT_VISIBLE], 
-                'in');            
+                'visibility',
+                [\Magento\Catalog\Model\Product\Visibility::VISIBILITY_NOT_VISIBLE],
+                'in');
         }
 
         $rule_id = $this->request->getParam('rule_id');
         if($rule_id) {
             $group_rule_id = $this->createSingleFilterFilterGroup(
                 'rule_id', $rule_id, 'eq');
-            $groups[]      = $group_rule_id;         
+            $groups[]      = $group_rule_id;
         }
-                                              
-        $page_size = (int) $this->request->getParam(self::PARAM_PAGE_SIZE);
-        $page_size = $page_size ? $page_size : 100;                
-        
-        $current_page = (int) $this->request->getParam(self::PARAM_CURRENT_PAGE);
-        $current_page = $current_page ? $current_page : 1;
-        
+
+        // Set default page size based on 'count' parameter being present or not
+        $defaultPageSize = $this->request->getParam(self::PARAM_COUNT) ? false : 100;
+        $pageSize = (int) $this->request->getParam(self::PARAM_PAGE_SIZE, $defaultPageSize);
+
+        $currentPage = (int) $this->request->getParam(self::PARAM_CURRENT_PAGE, 1);
+
         return $this->searchCriteriaBuilder
             ->setFilterGroups($groups)
-            ->setPageSize($page_size)
-            ->setCurrentPage($current_page)
+            ->setPageSize($pageSize)
+            ->setCurrentPage($currentPage)
             ->create();
     }
-    
+
     protected function createSingleFilterFilterGroup($field, $value, $conditionType = 'eq')
     {
         return $this->filterGroupBuilder
             ->addFilter($this->createFilter($field,$value,$conditionType))
-            ->create();    
+            ->create();
     }
-    
+
     /**
     * Targeting public beta -- no addFilter on searchCriteriaBuilder
-    */    
+    */
     protected function createFilter($field, $value, $conditionType = 'eq')
     {
         return  $this->filterBuilder->setField($field)
