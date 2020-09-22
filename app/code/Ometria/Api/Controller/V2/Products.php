@@ -234,7 +234,7 @@ class Products extends Action
         $productData[OmetriaProductInterface::IS_ACTIVE] = (bool) $product->getStatus();
         $productData[OmetriaProductInterface::STORES] = $product->getStoreIds();
         $productData[OmetriaProductInterface::IS_IN_STOCK] = (string) $stockItem->getIsInStock();
-        $productData[OmetriaProductInterface::QTY] = $stockItem->getManageStock() ? $stockItem->getQty() : null;
+        $productData[OmetriaProductInterface::QTY] = (float) $stockItem->getManageStock() ? $stockItem->getQty() : 0;
 
         $this->appendProductPriceData($productData, $product);
 
