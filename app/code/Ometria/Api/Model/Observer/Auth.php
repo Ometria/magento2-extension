@@ -1,40 +1,64 @@
 <?php
 namespace Ometria\Api\Model\Observer;
-use Ometria\Api\Controller\V1\Get\Settings;
+
+use Magento\Framework\Event\Observer;
+use Magento\Framework\Event\ObserverInterface;
+use Ometria\Api\Helper\Config as ConfigHelper;
 use Ometria\Api\Model\Hash;
 
-class Auth implements \Magento\Framework\Event\ObserverInterface
+class Auth implements ObserverInterface
 {
-    protected $config;
-    public function __construct(\Ometria\Api\Helper\Config $config)
-    {
+    /** @var ConfigHelper */
+    private $config;
+
+    /** @var Hash */
+    private $hash;
+
+    /**
+     * @param ConfigHelper $config
+     * @param Hash $hash
+     */
+    public function __construct(
+        ConfigHelper $config,
+        Hash $hash
+    ) {
         $this->config = $config;
+        $this->hash = $hash;
     }
-    
-    public function execute(\Magento\Framework\Event\Observer $observer)
+
+    /**
+     * @param Observer $observer
+     */
+    public function execute(Observer $observer)
     {
         return $this->checkHeader($observer);
     }
-    
+
+    /**
+     * @param $observer
+     */
     public function checkHeader($observer)
-    {        
-        $public_key     = $this->config->get('general/apikey');
-        $private_key    = $this->config->get('general/privatekey');                
-        $method_name    = $this->getMethodNameFromObserver($observer);
-        
-        $is_authorized = Hash::checkRequest($method_name,$public_key,$private_key);
-        if(!$is_authorized)
-        {
+    {
+        $publicKey  = $this->config->get('general/apikey');
+        $privateKey = $this->config->get('general/privatekey');
+        $methodName = $this->getMethodNameFromObserver($observer);
+
+        $isAuthorized = $this->hash->checkRequest($methodName,$publicKey,$privateKey);
+
+        if (!$isAuthorized) {
             echo "Forbidden";
             header('HTTP/1.1 403 Forbidden');
             exit;
-            //             throw new \Exception("Unauthorized");
         }
     }
-    
+
+    /**
+     * @param $observer
+     * @return mixed
+     */
     protected function getMethodNameFromObserver($observer)
     {
         $request = $observer->getRequest();
         return $request->getActionName();
-    }       
+    }
 }
