@@ -2,12 +2,11 @@
 namespace Ometria\Api\Controller\V1;
 
 use Magento\Catalog\Api\Data\ProductInterface;
+use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
 use Magento\CatalogInventory\Api\StockRegistryInterface;
 use Magento\Framework\Exception\LocalizedException;
+use Ometria\Api\Helper\Filter\V1\Service as FilterService;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
-use Ometria\Api\Controller\V1\Base;
-use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
-use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
 
 class Products extends Base
 {
@@ -101,7 +100,7 @@ class Products extends Base
     {
         $items = $this->getProductItems();
 
-        if ($this->_request->getParam('count') != null) {
+        if ($this->_request->getParam(FilterService::PARAM_COUNT)) {
             $data = $this->getCountData($items);
         } else {
             $data = $this->getItemsData($items);
@@ -141,12 +140,12 @@ class Products extends Base
             $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
         }
 
-        $pageSize = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
-        $pageSize = $pageSize ? $pageSize : 100;
+        // Set default page size based on 'count' parameter being present or not
+        $defaultPageSize = $this->_request->getParam(FilterService::PARAM_COUNT) ? false : 100;
+        $pageSize = $this->getRequest()->getParam(FilterService::PARAM_PAGE_SIZE, $defaultPageSize);
         $collection->setPageSize($pageSize);
 
-        $currentPage = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
-        $currentPage = $currentPage ? $currentPage : 1;
+        $currentPage = $this->getRequest()->getParam(FilterService::PARAM_CURRENT_PAGE, 1);
         $collection->setCurPage($currentPage);
 
         return $this->apiHelperServiceFilterable->processList(
