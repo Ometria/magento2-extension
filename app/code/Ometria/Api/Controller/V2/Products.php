@@ -170,13 +170,21 @@ class Products extends Action
     }
 
     /**
+     * Get count, taking explicit page_size request param in to account (page_size is removed by getSize function).
+     *
      * @param Collection $collection
      * @return array
      */
     private function getItemsCount(Collection $collection)
     {
+        $count = $collection->getSize();
+
+        if ($requestPageSize = $this->_request->getParam(Service::PARAM_PAGE_SIZE)) {
+            $count = ($requestPageSize < $count) ? $requestPageSize : $count;
+        }
+
         return [
-            'count' => $collection->getSize()
+            'count' => (int) $count
         ];
     }
 
