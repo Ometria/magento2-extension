@@ -13,18 +13,25 @@ use Magento\Catalog\Pricing\Price\RegularPrice;
 use Magento\Catalog\Pricing\Price\SpecialPrice;
 use Magento\CatalogInventory\Api\Data\StockItemInterface;
 use Magento\CatalogInventory\Api\StockRegistryInterface;
+use Magento\CatalogInventory\Helper\Stock as StockHelper;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\Controller\ResultFactory;
+use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory;
+use Magento\Tax\Api\Data\QuoteDetailsItemInterfaceFactory;
+use Magento\Tax\Api\Data\TaxClassKeyInterface;
+use Magento\Tax\Api\Data\TaxClassKeyInterfaceFactory;
+use Magento\Tax\Api\Data\TaxDetailsItemInterface;
+use Magento\Tax\Api\TaxCalculationInterface;
+use Magento\Tax\Model\Config as TaxConfig;
 use Ometria\Api\Api\Data\ProductInterface as OmetriaProductInterface;
 use Ometria\Api\Helper\Filter\V2\Service;
 use Ometria\Api\Model\ResourceModel\Product as ProductResource;
 use Ometria\Core\Helper\Product as ProductHelper;
-use Magento\Framework\Controller\ResultInterface;
-use Magento\CatalogInventory\Helper\Stock as StockHelper;
 
 class Products extends Action
 {
@@ -60,6 +67,21 @@ class Products extends Action
 
     /** @var Service */
     private $serviceV2;
+
+    /** @var TaxClassKeyInterfaceFactory */
+    private $taxClassKeyFactory;
+
+    /** @var TaxConfig */
+    private $taxConfig;
+
+    /** @var QuoteDetailsInterfaceFactory */
+    private $quoteDetailsFactory;
+
+    /** @var QuoteDetailsItemInterfaceFactory */
+    private $quoteDetailsItemFactory;
+
+    /** @var TaxCalculationInterface */
+    private $taxCalculationService;
 
     /** @var array */
     private $productCollections = [];
@@ -97,6 +119,11 @@ class Products extends Action
      * @param ProductHelper $productHelper
      * @param StockHelper $stockHelper
      * @param Service $serviceV2
+     * @param TaxClassKeyInterfaceFactory $taxClassKeyFactory
+     * @param TaxConfig $taxConfig
+     * @param QuoteDetailsInterfaceFactory $quoteDetailsFactory
+     * @param QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory
+     * @param TaxCalculationInterface $taxCalculationService
      */
     public function __construct(
         Context $context,
@@ -109,7 +136,12 @@ class Products extends Action
         StoreManagerInterface $storeManager,
         ProductHelper $productHelper,
         StockHelper $stockHelper,
-        Service $serviceV2
+        Service $serviceV2,
+        TaxClassKeyInterfaceFactory $taxClassKeyFactory,
+        TaxConfig $taxConfig,
+        QuoteDetailsInterfaceFactory $quoteDetailsFactory,
+        QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory,
+        TaxCalculationInterface $taxCalculationService
     ) {
         parent::__construct($context);
 
@@ -123,6 +155,11 @@ class Products extends Action
         $this->productHelper = $productHelper;
         $this->stockHelper = $stockHelper;
         $this->serviceV2 = $serviceV2;
+        $this->taxClassKeyFactory = $taxClassKeyFactory;
+        $this->taxConfig = $taxConfig;
+        $this->quoteDetailsFactory = $quoteDetailsFactory;
+        $this->quoteDetailsItemFactory = $quoteDetailsItemFactory;
+        $this->taxCalculationService = $taxCalculationService;
     }
 
     /**
@@ -252,29 +289,6 @@ class Products extends Action
         }
 
         return $productData;
-    }
-
-    /**
-     * Update product data array with prices that exist for the product
-     * @param $productData
-     * @param ProductInterface $product
-     */
-    private function appendProductPriceData(&$productData, ProductInterface $product)
-    {
-        $prices = $product->getPriceInfo()->getPrices();
-
-        // Add pricing data to the product data array
-        if ($price = $prices->get(RegularPrice::PRICE_CODE)->getValue()) {
-            $productData[OmetriaProductInterface::PRICE] = $price;
-        }
-
-        if ($specialPrice = $prices->get(SpecialPrice::PRICE_CODE)->getValue()) {
-            $productData[OmetriaProductInterface::SPECIAL_PRICE] = $specialPrice;
-        }
-
-        if ($finalPrice = $prices->get(FinalPrice::PRICE_CODE)->getValue()) {
-            $productData[OmetriaProductInterface::FINAL_PRICE] = $finalPrice;
-        }
     }
 
     /**
@@ -517,6 +531,67 @@ class Products extends Action
         }
 
         return $listings;
+    }
+
+    /**
+     * Update product data array with prices that exist for the product
+     *
+     * @param $productData
+     * @param ProductInterface $product
+     */
+    private function appendProductPriceData(&$productData, ProductInterface $product)
+    {
+        $prices = $product->getPriceInfo()->getPrices();
+
+        // Add pricing data to the product data array
+        if ($price = $prices->get(RegularPrice::PRICE_CODE)->getValue()) {
+            $productData[OmetriaProductInterface::PRICE] = $price;
+        }
+
+        if ($specialPrice = $prices->get(SpecialPrice::PRICE_CODE)->getValue()) {
+            $productData[OmetriaProductInterface::SPECIAL_PRICE] = $specialPrice;
+        }
+
+        if ($finalPrice = $prices->get(FinalPrice::PRICE_CODE)->getValue()) {
+            $productData[OmetriaProductInterface::FINAL_PRICE] = $finalPrice;
+        }
+
+        $taxDetailsItem = $this->getTaxDetails(
+            $product
+        );
+
+        $productData[OmetriaProductInterface::TAX_AMOUNT] = $taxDetailsItem->getRowTax();
+        $productData[OmetriaProductInterface::FINAL_PRICE_INCL_TAX] = $taxDetailsItem->getPriceInclTax();
+    }
+
+    /**
+     * @param $product
+     * @return TaxDetailsItemInterface
+     */
+    public function getTaxDetails($product)
+    {
+        $priceIncludesTax = $this->taxConfig->priceIncludesTax($product->getStoreId());
+
+        $taxClassKey = $this->taxClassKeyFactory->create();
+        $taxClassKey->setType(TaxClassKeyInterface::TYPE_ID)
+            ->setValue($product->getTaxClassId());
+
+        $item = $this->quoteDetailsItemFactory->create();
+        $item->setQuantity(1)
+            ->setCode($product->getSku())
+            ->setTaxClassKey($taxClassKey)
+            ->setIsTaxIncluded($priceIncludesTax)
+            ->setType('product')
+            ->setUnitPrice($product->getFinalPrice());
+
+        $quoteDetails = $this->quoteDetailsFactory->create();
+        $quoteDetails->setItems([$item]);
+
+        $taxDetails = $this->taxCalculationService->calculateTax($quoteDetails, $product->getStoreId(), true);
+
+        $taxDetailItems = $taxDetails->getItems();
+
+        return array_shift($taxDetailItems);
     }
 
     /**

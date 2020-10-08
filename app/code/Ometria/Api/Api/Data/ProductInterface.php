@@ -11,6 +11,8 @@ interface ProductInterface
     const PRICE = "price";
     const SPECIAL_PRICE = "special_price";
     const FINAL_PRICE = "final_price";
+    const FINAL_PRICE_INCL_TAX = "final_price_incl_tax";
+    const TAX_AMOUNT = "tax";
     const URL = "url";
     const IMAGE_URL = "image_url";
     const IS_VARIANT = "is_variant";
