@@ -3,6 +3,7 @@ namespace Ometria\Api\Test\Api;
 
 use Magento\TestFramework\Request;
 use Magento\TestFramework\TestCase\AbstractController;
+use Ometria\Api\Api\Data\ProductInterface;
 use Ometria\Api\Model\Hash;
 
 /**
@@ -76,30 +77,39 @@ class ProductTest extends AbstractController
      */
     public function testCompareV1andV2Response(\Magento\Framework\App\Response\Http $productResponseV1, $productResponseV2)
     {
-        $productsV1 = $this->removeIncrementalIds($productResponseV1->getContent());
-        $productsV2 = $this->removeIncrementalIds($productResponseV2->getContent());
+        $productsV1 = $this->removeUntestableData($productResponseV1->getContent());
+        $productsV2 = $this->removeUntestableData($productResponseV2->getContent());
 
         $this->assertJsonStringEqualsJsonString($productsV1, $productsV2);
     }
 
     /**
-     * Due to the Magento testing framework creating new attributes for each test, the auto increment IDs will show as a
-     * difference in the response. For this reason the IDs are set to 0 here for the configurable attributes that would
-     * exhibit this issue.
+     * Manipulate the data to remove elements which are untestable between the V1 and V2 APIs
      *
      * @param $products
      * @return false|string
      */
-    private function removeIncrementalIds($products)
+    private function removeUntestableData($products)
     {
         $json = json_decode($products, true);
 
         foreach ($json as &$product) {
+            /**
+             * Due to the Magento testing framework creating new attributes for each test, the auto increment IDs will show as a
+             * difference in the response. For this reason the IDs are set to 0 here for the configurable attributes that would
+             * exhibit this issue.
+             */
             foreach ($product['attributes'] as &$attribute) {
                 if ($attribute['type'] = 'test_configurable') {
                     $attribute['id'] = 0;
                 }
             }
+
+            /**
+             * Unset tax and final_price_incl_tax values that are only present in V2 API
+             */
+            unset($product[ProductInterface::FINAL_PRICE_INCL_TAX]);
+            unset($product[ProductInterface::TAX_AMOUNT]);
         }
 
         return json_encode($json);
