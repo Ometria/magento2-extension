@@ -7,6 +7,7 @@ use Magento\Catalog\Model\Product\Visibility;
 
 class Service
 {
+    const PARAM_ENTITY_IDS = 'ids';
     const PARAM_WEBSITE_IDS = 'website_ids';
     const PARAM_STORES = 'stores';
     const PARAM_CREATED_SINCE = 'created_since';
@@ -48,6 +49,14 @@ class Service
         // Set current page
         $currentPage = $this->request->getParam(self::PARAM_CURRENT_PAGE, self::DEFAULT_PAGE);
         $collection->setCurPage($currentPage);
+
+        if ($entityIds = $this->request->getParam(self::PARAM_ENTITY_IDS)) {
+            $entityIds = is_array($entityIds) ? $entityIds : [$entityIds];
+            $collection->addFieldToFilter(
+                'entity_id',
+                $entityIds
+            );
+        }
 
         if ($websiteIds = $this->request->getParam(self::PARAM_WEBSITE_IDS)) {
             $collection->addWebsiteFilter($websiteIds);
