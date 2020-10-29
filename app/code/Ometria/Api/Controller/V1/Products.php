@@ -254,9 +254,9 @@ class Products extends Base
                 // pass
             }
         }
-        
+
         $this->prepareChildParentRelationships($items);
-        
+
         $items      = array_map(function($item){
             return $this->serializeItem($item);
         }, $items);
@@ -475,7 +475,7 @@ class Products extends Base
         $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
 
         if (isset($stockItem['is_in_stock'])) {
-            $item['is_in_stock'] = $stockItem['is_in_stock'];
+            $item['is_in_stock'] = (bool) $stockItem['is_in_stock'];
         }
 
         if (isset($stockItem['qty'])) {
@@ -549,7 +549,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_super_link'),
@@ -559,9 +559,9 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
-        
+
         $result = $connection->fetchAll($select);
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['parent_id'];
@@ -573,7 +573,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\Bundle\Model\ResourceModel\Selection::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -582,7 +582,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_bundle_selection'),
@@ -592,7 +592,7 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest selections first so the iterator will end with the most recent link 
+            // order by the oldest selections first so the iterator will end with the most recent link
             ->order('selection_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -606,7 +606,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\GroupedProduct\Model\ResourceModel\Product\Link::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -615,7 +615,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_link'),
@@ -629,7 +629,7 @@ class Products extends Base
                 'link_type_id = ?',
                 \Magento\GroupedProduct\Model\ResourceModel\Product\Link::LINK_TYPE_GROUPED
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -647,7 +647,7 @@ class Products extends Base
     protected function getVariantParentId($item)
     {
         $productId = $this->getArrayKey($item, 'id');
-        
+
         // if the product can be viewed individually, it should not be treated as a variant
         $visibleInSiteVisibilities = [
             \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_CATALOG,
