@@ -2,6 +2,7 @@
 namespace Ometria\Core\Block;
 use stdClass;
 use Magento\Store\Model\ScopeInterface;
+use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 
 class Head extends \Magento\Framework\View\Element\Template
 {
@@ -14,11 +15,12 @@ class Head extends \Magento\Framework\View\Element\Template
     const PAGE_TYPE_PRODUCT      = 'product';
     const PAGE_TYPE_SEARCH       = 'search';
 
+    const OM_PRODUCT_MAP         = 'product_map';
     const OM_QUERY               = 'query';
     const OM_SITE                = 'store';
     const OM_PAGE_TYPE           = 'type';
     const OM_PAGE_DATA           = 'data';
-    
+
     protected $scopeConfig;
     protected $storeModelStoreManagerInterface;
     protected $magentoFrameworkUrlInterface;
@@ -30,17 +32,17 @@ class Head extends \Magento\Framework\View\Element\Template
     protected $salesModelOrder;
     protected $stockRegistry;
     protected $query;
-    
+
     public function __construct(
-        \Magento\Framework\View\Element\Template\Context $context, 
-        \Magento\Framework\Registry $magentoFrameworkRegistry,   
-        \Magento\Catalog\Model\ProductFactory $catalogModelProductFactory,  
-        \Ometria\Core\Helper\Product $coreHelperProduct,  
-        \Magento\Checkout\Model\Cart $checkoutModelCart, 
-        \Magento\Checkout\Model\Session $checkoutModelSession, 
-        \Magento\Sales\Model\OrderFactory $salesModelOrderFactory,    
-        \Magento\Search\Model\QueryInterface $query,    
-        \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry,          
+        \Magento\Framework\View\Element\Template\Context $context,
+        \Magento\Framework\Registry $magentoFrameworkRegistry,
+        \Magento\Catalog\Model\ProductFactory $catalogModelProductFactory,
+        \Ometria\Core\Helper\Product $coreHelperProduct,
+        \Magento\Checkout\Model\Cart $checkoutModelCart,
+        \Magento\Checkout\Model\Session $checkoutModelSession,
+        \Magento\Sales\Model\OrderFactory $salesModelOrderFactory,
+        \Magento\Search\Model\QueryInterface $query,
+        \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry,
         array $data = []
     )
     {
@@ -48,18 +50,18 @@ class Head extends \Magento\Framework\View\Element\Template
         $this->salesModelOrderFactory           = $salesModelOrderFactory;
         $this->checkoutModelCart                = $checkoutModelCart;
         $this->checkoutModelSession             = $checkoutModelSession;
-            
+
         $this->frameworkAppRequestInterface     = $context->getRequest();
         $this->coreHelperProduct                = $coreHelperProduct;
         $this->catalogModelProductFactory       = $catalogModelProductFactory;
-        $this->magentoFrameworkRegistry         = $magentoFrameworkRegistry;    
+        $this->magentoFrameworkRegistry         = $magentoFrameworkRegistry;
         $this->stockRegistry                    = $stockRegistry;
-        $this->magentoFrameworkUrlInterface     = $context->getUrlBuilder();    
-        $this->storeModelStoreManagerInterface  = $context->getStoreManager();    
+        $this->magentoFrameworkUrlInterface     = $context->getUrlBuilder();
+        $this->storeModelStoreManagerInterface  = $context->getStoreManager();
         $this->scopeConfig                      = $context->getScopeConfig();
         return parent::__construct($context, $data);
     }
-    
+
     public function getAPIKey()
     {
         return $this->scopeConfig->getValue(
@@ -67,12 +69,12 @@ class Head extends \Magento\Framework\View\Element\Template
             ScopeInterface::SCOPE_STORE
         );
     }
-    
+
     public function isUnivarEnabled()
     {
         return $this->scopeConfig->getValue('ometria/advanced/univar');
     }
-    
+
     public function getDataLayer()
     {
         $category = 'null';
@@ -100,7 +102,8 @@ class Head extends \Magento\Framework\View\Element\Template
 
         } elseif ($this->_isProduct()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_PRODUCT;
-            $page[self::OM_PAGE_DATA] = $this->_getProductPageData();            
+            $page[self::OM_PAGE_DATA] = $this->_getProductPageData();
+            $page[self::OM_PRODUCT_MAP] = $this->_getProductMappingData();
         } elseif ($this->_isBasket()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_BASKET;
 
@@ -120,13 +123,13 @@ class Head extends \Magento\Framework\View\Element\Template
                 );
         }
 
-        return $page;    
+        return $page;
     }
 
     protected function _isHomepage() {
         return $this->getUrl('') == $this->getUrl('*/*/*', array('_current'=>true, '_use_rewrite'=>true));
     }
-    
+
     protected function _getStore() {
         return $this->storeModelStoreManagerInterface->getStore()->getStoreId();
     }
@@ -137,21 +140,21 @@ class Head extends \Magento\Framework\View\Element\Template
 
     protected function _getRouteName() {
         return $this->getRequest()->getRouteName();
-    }  
-    
+    }
+
     protected function _getControllerName() {
         return $this->getRequest()->getControllerName();
     }
 
     protected function _getActionName() {
         return $this->getRequest()->getActionName();
-    }   
-    
+    }
+
     protected function _isProduct() {
         return $this->_getRouteName()      == 'catalog'
             && $this->_getControllerName() == 'product';
     }
-        
+
     protected function _isCMSPage() {
         return $this->_getRouteName() == 'cms';
     }
@@ -159,34 +162,43 @@ class Head extends \Magento\Framework\View\Element\Template
     protected function _isCategory() {
         return $this->_getRouteName()       == 'catalog'
             && $this->_getControllerName()  == 'category';
-    }  
-    
+    }
+
     protected function _isSearch() {
         return $this->_getRouteName() == 'catalogsearch';
     }
-     
-    protected function _getProductPageData(){
-        $product = $this->magentoFrameworkRegistry->registry("current_product");
 
-        if (!$product && $id = $this->getProductId()) {
-            $product = $this->catalogModelProductFactory->create()->load($id);
-        }    
+    /**
+     * @return array|bool
+     */
+    protected function _getProductPageData()
+    {
+        $product = $this->getCurrentProduct();
 
         if ($product) {
             return $this->_getProductInfo($product);
         }
+
         return false;
-    }   
-    
+    }
+
+    /**
+     * @param $product
+     * @return bool
+     */
     protected function _getProductInStock($product)
     {
         $stock = $this->stockRegistry->getStockItem($product->getId());
         return (boolean) $stock->getIsInStock();
     }
-    
-    protected function _getProductInfo($product) {
-        if($product instanceof \Magento\Catalog\Model\Product) {
 
+    /**
+     * @param $product
+     * @return array|bool
+     */
+    protected function _getProductInfo($product)
+    {
+        if ($product instanceof \Magento\Catalog\Model\Product) {
             $productInfo = array(
                 'id'        => $this->coreHelperProduct->getIdentifierForProduct($product),
                 'sku'       => $product->getSku(),
@@ -222,19 +234,58 @@ class Head extends \Magento\Framework\View\Element\Template
         }
 
         return false;
-    }    
-    
+    }
+
+    /**
+     * @return array|null
+     */
+    protected function _getProductMappingData()
+    {
+        $product = $this->getCurrentProduct();
+
+        /**
+         * Only include child map for configurable products
+         */
+        if ($product && $product->getTypeId() == Configurable::TYPE_CODE) {
+            return $this->_getConfigurableProductMap($product);
+        }
+
+        return false;
+    }
+
+    /**
+     * @todo correctly handle child product URLs
+     *
+     * @param \Magento\Catalog\Model\Product $product
+     */
+    protected function _getConfigurableProductMap($product)
+    {
+        $productMap = [];
+        $childProducts = $product->getTypeInstance()->getUsedProducts($product);
+
+        if (count($childProducts) > 0) {
+            foreach ($childProducts as $childProduct) {
+                $productMap[$childProduct->getId()] = $this->_getProductInfo($childProduct);
+
+                // Override to always give URL of parent product
+                $productMap[$childProduct->getId()]['url'] = $product->getProductUrl();
+            }
+        }
+
+        return $productMap;
+    }
+
     protected function _isBasket() {
         return $this->_getRouteName()           == 'checkout'
                 && $this->_getControllerName()  == 'cart'
                 && $this->_getActionName()      == 'index';
     }
-    
+
     protected function _isCheckout() {
         return strpos($this->_getRouteName(), 'checkout') !== false
                 && $this->_getActionName()  != 'success';
     }
-    
+
     protected function _getCheckoutStep() {
         if(!$this->_isCheckout())
         {
@@ -246,7 +297,7 @@ class Head extends \Magento\Framework\View\Element\Template
         }
 
         return false;
-    }    
+    }
 
     protected function _isOrderConfirmation() {
         return strpos($this->_getRouteName(), 'checkout') !== false
@@ -267,8 +318,8 @@ class Head extends \Magento\Framework\View\Element\Template
         }
 
         return false;
-    }    
-    
+    }
+
     protected function _getCheckoutSession() {
         if ($this->_isBasket())
             return $this->checkoutModelCart;
@@ -277,16 +328,16 @@ class Head extends \Magento\Framework\View\Element\Template
     }
 
     protected function _getSearchQuery()
-    {            
+    {
         if(!$this->_isSearch())
             return false;
-        
+
         $param_names = [
             \Magento\Search\Model\QueryFactory::QUERY_VAR_NAME,
             'q',
             'query_text'
         ];
-        
+
         foreach($param_names as $param)
         {
             $text = $this->getRequest()->getParam($param);
@@ -294,7 +345,26 @@ class Head extends \Magento\Framework\View\Element\Template
             {
                 return $text;
             }
-        }         
-        return false;   
-    }          
+        }
+        return false;
+    }
+
+    /**
+     * Try to get the currently active product
+     * @return bool|\Magento\Catalog\Model\Product|mixed
+     */
+    protected function getCurrentProduct()
+    {
+        $product = $this->magentoFrameworkRegistry->registry("current_product");
+
+        if (!$product && $id = $this->getProductId()) {
+            $product = $this->catalogModelProductFactory->create()->load($id);
+        }
+
+        if ($product) {
+            return $product;
+        }
+
+        return false;
+    }
 }

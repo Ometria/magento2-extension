@@ -4,6 +4,8 @@
  */
 namespace Ometria\Core\Model\Observer;
 
+use Magento\ConfigurableProduct\Model\Product\Type\Configurable as ConfigurableType;
+
 class Product {
 
     /**
@@ -13,17 +15,24 @@ class Product {
     protected $helperPing;
     protected $helperProduct;
     protected $helperRequest;
+
+    /** @var ConfigurableType */
+    private $configurableType;
+
     public function __construct(
         \Magento\Catalog\Helper\Product\Edit\Action\Attribute $catalogProductEditActionAttributeHelper,
-        \Ometria\Core\Helper\Ping $helperPing, 
+        \Ometria\Core\Helper\Ping $helperPing,
         \Ometria\Core\Helper\Product $helperProduct,
-        \Ometria\Core\Helper\Get\Request $request              
+        \Ometria\Core\Helper\Get\Request $request,
+        ConfigurableType $configurableType
     ) {
         $this->catalogProductEditActionAttributeHelper = $catalogProductEditActionAttributeHelper;
-        $this->helperPing    = $helperPing;        
-        $this->helperProduct = $helperProduct;        
+        $this->helperPing    = $helperPing;
+        $this->helperProduct = $helperProduct;
         $this->helperRequest = $request;
+        $this->configurableType = $configurableType;
     }
+
     /**
      * Catalog Product Delete After
      *
@@ -35,6 +44,7 @@ class Product {
 
         $product = $observer->getEvent()->getProduct();
         $this->updateProducts($product->getId());
+        $this->updateAssociatedProducts($product->getId());
 
         \Magento\Framework\Profiler::stop("Ometria::" . __METHOD__);
 
@@ -52,6 +62,7 @@ class Product {
 
         $product = $observer->getEvent()->getProduct();
         $this->updateProducts($product->getId());
+        $this->updateAssociatedProducts($product->getId());
 
         \Magento\Framework\Profiler::stop("Ometria::" . __METHOD__);
 
@@ -69,6 +80,7 @@ class Product {
 
         $productIds = $this->catalogProductEditActionAttributeHelper->getProductIds();
         $this->updateProducts($productIds);
+        $this->updateAssociatedProducts($productIds);
 
         \Magento\Framework\Profiler::stop("Ometria::" . __METHOD__);
 
@@ -87,6 +99,7 @@ class Product {
         //$productIds = Mage::app()->getFrontController()->getRequest()->getParam('product');
         $productIds = $this->helperRequest->getParam('selected');
         $this->updateProducts($productIds);
+        $this->updateAssociatedProducts($productIds);
 
         \Magento\Framework\Profiler::stop("Ometria::" . __METHOD__);
 
@@ -96,19 +109,39 @@ class Product {
 
     /**
      * Pass product ids to Ometria API model
-     *
      * @param $ids
-     * @return bool
-     *
      */
-    protected function updateProducts($ids) {
-        //$ometria_ping_helper = Mage::helper('ometria/ping');
-        //$ometria_product_helper = Mage::helper('ometria/product');        
-        $ometria_ping_helper = $this->helperPing;
-        $ometria_product_helper = $this->helperProduct;
+    private function updateProducts($ids)
+    {
+        $ids = $this->helperProduct->convertProductIdsIfNeeded($ids);
+        $this->helperPing->sendPing('product', $ids);
+    }
 
-        $ids = $ometria_product_helper->convertProductIdsIfNeeded($ids);
+    /**
+     * Pass product ids of parent configurables affected by updates to Ometria API model
+     * @param $ids
+     */
+    private function updateAssociatedProducts($ids)
+    {
+        $assocIds = array();
 
-        $ometria_ping_helper->sendPing('product', $ids);
+        // Standardise product IDs to array
+        if (!is_array($ids)) {
+            $ids = explode(',', $ids);
+        }
+
+        // Check for configurable parent products affected
+        foreach ($ids as $id) {
+            $parentIds = $this->configurableType->getParentIdsByChild($id);
+            foreach ($parentIds as $parentId) {
+                $assocIds[] = $parentId;
+            }
+        }
+
+        // Ping Ometria with unique parent Ids, if any
+        if (count($assocIds)) {
+            $assocIds = $this->helperProduct->convertProductIdsIfNeeded(array_unique($assocIds));
+            $this->helperPing->sendPing('product', $assocIds);
+        }
     }
 }

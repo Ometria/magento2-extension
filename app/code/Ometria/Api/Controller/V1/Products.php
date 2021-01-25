@@ -1,10 +1,12 @@
 <?php
 namespace Ometria\Api\Controller\V1;
 
+use Magento\Catalog\Api\Data\ProductInterface;
+use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
 use Magento\CatalogInventory\Api\StockRegistryInterface;
 use Magento\Framework\Exception\LocalizedException;
+use Ometria\Api\Helper\Filter\V1\Service as FilterService;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
-use Ometria\Api\Controller\V1\Base;
 
 class Products extends Base
 {
@@ -17,7 +19,7 @@ class Products extends Base
     protected $attributesFactory;
     protected $helperCategory;
     protected $response;
-    protected $productCollection;
+    protected $productCollectionFactory;
     protected $helperOmetriaApiFilter;
     protected $searchCriteria;
     protected $dataObjectProcessor;
@@ -26,7 +28,6 @@ class Products extends Base
     protected $searchCriteriaBuilder;
     protected $priceRender;
     protected $productFactory;
-    protected $catalogProductMediaConfig;
     protected $resourceConnection;
     protected $request;
     protected $directoryHelper;
@@ -52,7 +53,7 @@ class Products extends Base
     protected $childParentBundleProductIds = [];
     protected $childParentGroupedProductIds = [];
 
-	public function __construct(
+    public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
 		\Ometria\Api\Helper\Service\Filterable\Service\Product $apiHelperServiceFilterable,
@@ -61,12 +62,11 @@ class Products extends Base
 		\Ometria\Api\Helper\Category $helperCategory,
 		\Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,
 		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
-		\Magento\Catalog\Model\ResourceModel\Product\Collection $productCollection,
+		\Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productCollectionFactory,
 		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor,
 		\Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
         \Magento\Catalog\Api\ProductAttributeRepositoryInterface $metadataServiceInterface,
-        \Magento\Catalog\Model\Product\Media\Config $catalogProductMediaConfig,
         \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Framework\App\ResourceConnection $resourceConnection,
         \Magento\Directory\Helper\Data $directoryHelper,
@@ -83,13 +83,12 @@ class Products extends Base
 		$this->attributesFactory          = $attributesFactory;
 		$this->helperCategory             = $helperCategory;
 		$this->response                   = $context->getResponse();
-		$this->productCollection          = $productCollection;
+		$this->productCollectionFactory   = $productCollectionFactory;
 		$this->helperOmetriaApiFilter     = $helperOmetriaApiFilter;
 		$this->searchCriteria             = $searchCriteria;
 		$this->dataObjectProcessor        = $dataObjectProcessor;
 		$this->storeManager               = $storeManager;
 		$this->productFactory             = $productFactory;
-		$this->catalogProductMediaConfig  = $catalogProductMediaConfig;
 		$this->resourceConnection         = $resourceConnection;
 		$this->directoryHelper            = $directoryHelper;
 		$this->storeUrlHelper             = $storeUrlHelper;
@@ -97,64 +96,129 @@ class Products extends Base
         $this->stockRegistry              = $stockRegistry;
 	}
 
+    public function execute()
+    {
+        $items = $this->getProductItems();
+
+        if ($this->_request->getParam(FilterService::PARAM_COUNT)) {
+            $data = $this->getCountData($items);
+        } else {
+            $data = $this->getItemsData($items);
+        }
+
+        return $this->resultJsonFactory->create()->setData($data);
+    }
+
+    /**
+     * @return array
+     * @throws LocalizedException
+     */
+    private function getProductItems()
+    {
+        $collection = $this->productCollectionFactory->create();
+
+        $searchCriteria = $this->helperOmetriaApiFilter
+            ->applyFilertsToSearchCriteria($this->searchCriteria);
+
+        $this->setCurrentStoreIfStoreIdFilterExists($searchCriteria);
+
+        foreach ($this->metadataService->getList($this->searchCriteriaBuilder->create())->getItems() as $metadata) {
+            $collection->addAttributeToSelect($metadata->getAttributeCode());
+        }
+
+        foreach ($searchCriteria->getFilterGroups() as $group) {
+            $this->addFilterGroupToCollection($group, $collection);
+        }
+
+        if ($this->getRequest()->getParam('product_store')) {
+            $collection->setStoreId($this->getRequest()->getParam('product_store'));
+        }
+
+        $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
+
+        if ($this->needsVisibilityJoin) {
+            $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
+        }
+
+        // Set default page size based on 'count' parameter being present or not
+        $defaultPageSize = $this->_request->getParam(FilterService::PARAM_COUNT) ? false : 100;
+        $pageSize = $this->getRequest()->getParam(FilterService::PARAM_PAGE_SIZE, $defaultPageSize);
+        $collection->setPageSize($pageSize);
+
+        $currentPage = $this->getRequest()->getParam(FilterService::PARAM_CURRENT_PAGE, 1);
+        $collection->setCurPage($currentPage);
+
+        // Sort by product entity ID for consistency
+        $collection->addAttributeToSort('entity_id', 'asc');
+
+        return $this->apiHelperServiceFilterable->processList(
+            $collection,
+            ProductInterface::class,
+            $this->getRequest()->getParam('product_image', 'image')
+        );
+    }
+
+    /**
+     * @param $items
+     * @return array
+     */
+    private function getCountData($items)
+    {
+        return [
+            'count' => count($items)
+        ];
+    }
+
+    /**
+     * @param $collection
+     * @return array
+     */
+    private function getItemsData($items)
+    {
+        if ($this->_request->getParam('listing') === 'true') {
+            try {
+                $items = $this->addStoreListingToItems($items, $this->resourceConnection);
+            } catch (\Exception $e) {
+                // pass
+            }
+        }
+
+        $this->prepareChildParentRelationships($items);
+
+        $items = array_map(function ($item){
+            return $this->serializeItem($item);
+        }, $items);
+
+        return array_values($items);
+    }
+
 	protected function getArrayKey($array, $key)
 	{
 	    return array_key_exists($key, $array) ? $array[$key] : null;
 	}
 
-	protected function getCustomAttribute($array, $key)
-	{
-	    $attributes = $this->getArrayKey($array, 'custom_attributes');
-	    if(!$attributes) { return; }
-
-	    $item       = array_filter($attributes, function($item) use ($key){
-	        return $item['attribute_code'] === $key;
-	    });
-	    $item = array_shift($item);
-
-	    if($item)
-	    {
-	        return $item['value'];
-	    }
-	    return null;
-	}
-
 	protected function getImageUrlKey()
 	{
 	    $key = $this->getRequest()->getParam('product_image');
-	    if($key)
-	    {
+
+	    if ($key) {
 	        return $key;
 	    }
-	    return 'image';
-	}
 
-	protected function getBaseImageUrl($store_id=false)
-	{
-	    $store = $this->storeManager->getStore();
-	    if($store_id)
-	    {
-    	    $store = $this->storeManager->getStore($store_id);
-	    }
-        $baseUrl = 	$store->getBaseUrl(
-                \Magento\Framework\UrlInterface::URL_TYPE_MEDIA) .
-        $this->catalogProductMediaConfig->getBaseMediaPath();
-        return $baseUrl;
+	    return 'image';
 	}
 
 	protected function serializeItem($item)
 	{
         $tmp = Helper::getBlankArray();
 
-        $image_path = $this->getCustomAttribute($item,$this->getImageUrlKey());
-
         $tmp['id']          = strval($this->getArrayKey($item, 'id'));
         $tmp['title']       = $this->getArrayKey($item, 'name');
         $tmp['sku']         = $this->getArrayKey($item, 'sku');
         $tmp['url']         = $this->getArrayKey($item, 'url');
-        $tmp['image_url']   = $image_path ? $this->getBaseImageUrl() . $image_path : null;
+        $tmp['image_url']   = $this->getArrayKey($item, 'image_url');
         $tmp['attributes']  = [];
-        $tmp['is_active']   = $this->getArrayKey($item, 'status') !== \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_DISABLED;
+        $tmp['is_active']   = $this->getArrayKey($item, 'status') !== ProductStatus::STATUS_DISABLED;
         $tmp['stores']      = $this->getArrayKey($item, 'store_ids');
 
         // Add parent ID if this is a variant simple product
@@ -163,12 +227,12 @@ class Products extends Base
             $tmp['is_variant'] = true;
         }
 
-        if($this->_request->getParam('raw') === 'true') {
+        if ($this->_request->getParam('raw') === 'true') {
             $tmp['_raw'] = $item;
         }
 
-        $tmp = $this->appendPricing($tmp['id'], $tmp);
         $tmp = $this->appendStock($tmp['id'], $tmp);
+        $tmp = $this->appendPricing($tmp['id'], $tmp);
 
         if (isset($item['store_listings'])) {
             $tmp['store_listings'] = $item['store_listings'];
@@ -177,29 +241,29 @@ class Products extends Base
         //add attributes
         $attributes = $this->getArrayKey($item, 'custom_attributes');
         $attributes = $attributes ? $attributes : [];
-        foreach($attributes as $attribute)
-        {
-            $full_attribute       = $this->attributesFactory->create()
+        foreach ($attributes as $attribute) {
+            $full_attribute = $this->attributesFactory->create()
                 ->addFieldToFilter('attribute_code', $attribute['attribute_code'])
                 ->getFirstItem();
 
             $key = 'value';
-            if(in_array($full_attribute->getFrontendInput(),['select', 'multiselect']))
-            {
+
+            if (in_array($full_attribute->getFrontendInput(), ['select', 'multiselect'])) {
                 $key = 'id';
             }
+
             $tmp['attributes'][] = [
-                'type' =>$attribute['attribute_code'],
-                $key   =>$attribute['value'],
-                'label'=>$full_attribute->getFrontendLabel()
+                'type'  => $attribute['attribute_code'],
+                $key    => $attribute['value'],
+                'label' => $full_attribute->getFrontendLabel()
             ];
         }
 
-        $categories_as_attributes = $this->helperCategory
-            ->getOmetriaAttributeFromCategoryIds(
-                $this->getArrayKey($item, 'category_ids'));
-        foreach($categories_as_attributes as $category)
-        {
+        $categoriesAsAttributes = $this->helperCategory->getOmetriaAttributeFromCategoryIds(
+            $this->getArrayKey($item, 'category_ids')
+        );
+
+        foreach ($categoriesAsAttributes as $category) {
             $tmp['attributes'][] = $category;
         }
 
@@ -210,76 +274,12 @@ class Products extends Base
         return $tmp;
 	}
 
-	protected function getItemsForJson()
-	{
-        $searchCriteria = $this->helperOmetriaApiFilter
-            ->applyFilertsToSearchCriteria($this->searchCriteria);
-        $this->setCurrentStoreIfStoreIdFilterExists($searchCriteria);
-
-        $collection = $this->productCollection;
-        foreach ($this->metadataService->getList($this->searchCriteriaBuilder->create())->getItems() as $metadata) {
-            $collection->addAttributeToSelect($metadata->getAttributeCode());
-        }
-
-        foreach ($searchCriteria->getFilterGroups() as $group) {
-            $this->addFilterGroupToCollection($group, $collection);
-        }
-
-        $page_size = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_PAGE_SIZE);
-        $page_size = $page_size ? $page_size : 100;
-        $collection->setPageSize($page_size);
-
-        $current_page = $this->getRequest()->getParam(\Ometria\Api\Helper\Filter\V1\Service::PARAM_CURRENT_PAGE);
-        $current_page = $current_page ? $current_page : 1;
-        $collection->setCurPage($current_page);
-
-        if ($this->getRequest()->getParam('product_store')){
-            $collection->setStoreId($this->getRequest()->getParam('product_store'));
-        }
-
-        $collection->joinAttribute('status', 'catalog_product/status', 'entity_id', null, 'inner');
-
-        if($this->needsVisibilityJoin)
-        {
-            $collection->joinAttribute('visibility', 'catalog_product/visibility', 'entity_id', null, 'inner');
-        }
-
-        $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
-
-        if($this->_request->getParam('listing') === 'true')
-        {
-            try {
-                $items = $this->addStoreListingToItems($items, $this->resourceConnection);
-            } catch (\Exception $e){
-                // pass
-            }
-        }
-        
-        $this->prepareChildParentRelationships($items);
-        
-        $items      = array_map(function($item){
-            return $this->serializeItem($item);
-        }, $items);
-
-        $items = array_values($items);
-        return $items;
-	}
-
-    public function execute()
-    {
-        $items  = $this->getItemsForJson();
-        $result = $this->resultJsonFactory->create();
-        return $result->setData($items);
-    }
-
     protected function setCurrentStoreIfStoreIdFilterExists($searchCriteria)
     {
         foreach ($searchCriteria->getFilterGroups() as $filterGroup) {
             foreach ($filterGroup->getFilters() as $filter) {
-                if($filter->getField() === 'store_id')
-                {
-                    foreach($filter->getValue() as $store_id)
-                    {
+                if ($filter->getField() === 'store_id') {
+                    foreach($filter->getValue() as $store_id) {
                         $this->storeManager->setCurrentStore(
                             $this->storeManager->getStore($store_id)
                         );
@@ -289,6 +289,7 @@ class Products extends Base
             }
         }
     }
+
     /**
     * Repository interface does not support store or website filtering
     */
@@ -298,28 +299,23 @@ class Products extends Base
     ) {
         $fields = [];
         foreach ($filterGroup->getFilters() as $filter) {
-            if($filter->getField() === 'store_id')
-            {
-                foreach($filter->getValue() as $store_id)
-                {
+            if ($filter->getField() === 'store_id') {
+                foreach ($filter->getValue() as $store_id) {
                     $store = $this->storeManager->getStore($store_id);
                     $collection->addStoreFilter($store);
                 }
                 continue;
             }
 
-            if($filter->getField() === 'website_ids')
-            {
-                foreach($filter->getValue() as $website_id)
-                {
+            if ($filter->getField() === 'website_ids') {
+                foreach($filter->getValue() as $website_id) {
                     $website = $this->storeManager->getWebsite($website_id);
                     $collection->addWebsiteFilter($website);
                 }
                 continue;
             }
 
-            if($filter->getField() === 'visibility')
-            {
+            if ($filter->getField() === 'visibility') {
                 $this->needsVisibilityJoin = false;
                 $collection->addFieldToFilter('visibility', ['in'=>$filter->getValue()]);
                 continue;
@@ -328,10 +324,11 @@ class Products extends Base
             $condition = $filter->getConditionType() ? $filter->getConditionType() : 'eq';
             $fields[] = ['attribute' => $filter->getField(), $condition => $filter->getValue()];
         }
-        if(count($fields) > 1)
-        {
+
+        if (count($fields) > 1) {
             throw new \Exception("Can't handle multiple OR filters");
         }
+
         if ($fields) {
             $attribute = $fields[0]['attribute'];
             unset($fields[0]['attribute']);
@@ -340,48 +337,45 @@ class Products extends Base
         }
     }
 
-    protected function addStoreListingToItems(
-        $items
-    ){
+    protected function addStoreListingToItems($items)
+    {
         $stores = $this->storeManager->getStores();
         $store_id_lookup = array();
-        foreach($stores as $store){
+
+        foreach ($stores as $store) {
             $id = $store->getId();
             $store_id_lookup[$id] = $store;
         }
 
         $all_store_ids = array();
         $all_product_ids = array();
-        foreach($items as &$item){
+
+        foreach ($items as $item) {
             $all_product_ids[] = $item['id'];
-            foreach($item['store_ids'] as $store_id){
+            foreach ($item['store_ids'] as $store_id) {
                 $all_store_ids[$store_id] = $store_id;
             }
         }
 
-
         $store_listings = array();
-        foreach($all_store_ids as $store_id){
+        foreach ($all_store_ids as $store_id) {
             $store = $store_id_lookup[$store_id];
             $store_listings = $this->getProductListingsForStore($store, $all_product_ids, $store_listings);
         }
 
         $ret = array();
-        foreach($items  as $item){
-            $id = $item['id'];
-            $item['store_listings'] = isset($store_listings[$id]) ? array_values($store_listings[$id]) : array();
-            $ret[] = $item;
+        foreach($items as $itemData) {
+            $id = $itemData['id'];
+            $itemData['store_listings'] = isset($store_listings[$id]) ? array_values($store_listings[$id]) : array();
+            $ret[] = $itemData;
         }
 
         return $ret;
     }
 
 
-    protected function getProductListingsForStore(
-        $store,
-        $productIds,
-        $store_listings
-    ){
+    protected function getProductListingsForStore($store, $productIds, $store_listings)
+    {
         $storeId = $store->getId();
 
         $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
@@ -392,16 +386,18 @@ class Products extends Base
                 ->setStoreId($storeId)
                 ->addAttributeToFilter('entity_id', array('in' => $productIds));
 
-        $items      = $this->apiHelperServiceFilterable->processList($collection, 'Magento\Catalog\Api\Data\ProductInterface');
+        $items = $this->apiHelperServiceFilterable->processList(
+            $collection,
+            'Magento\Catalog\Api\Data\ProductInterface',
+            $this->getRequest()->getParam('product_image', 'image')
+        );
 
         $base_currency = $store->getBaseCurrency()->getCode();
         $store_currency = $store->getDefaultCurrency()->getCode();
 
-        foreach($items as $item){
+        foreach ($items as $item) {
             $id = $item['id'];
-
             $url = $this->storeUrlHelper->getStoreUrlByProductIdAndStoreId($id, $storeId);
-
             $tmp = array(
                 'store_id' => $storeId,
                 'title' => $item['name'],
@@ -409,7 +405,7 @@ class Products extends Base
                 'store_currency' => $store_currency,
                 'visibility' => $item['visibility'],
                 'status' => $item['status'],
-                'image_url' => $this->getBaseImageUrl() . $this->getCustomAttribute($item,$this->getImageUrlKey())
+                'image_url' => $item['image_url']
                 );
 
             $tmp = $this->appendPricing($id, $tmp, $storeId, $base_currency, $store_currency);
@@ -446,7 +442,7 @@ class Products extends Base
             $item['special_price'] = $store_special_price;
         }
 
-        if($this->_request->getParam('final_price') === 'true') {
+        if ($this->_request->getParam('final_price') === 'true') {
             $store_final_price = $this->getProductPrice(
                 $product_id,
                 $storeId,
@@ -549,7 +545,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_super_link'),
@@ -559,9 +555,9 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
-        
+
         $result = $connection->fetchAll($select);
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['parent_id'];
@@ -573,7 +569,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\Bundle\Model\ResourceModel\Selection::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -582,7 +578,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_bundle_selection'),
@@ -592,7 +588,7 @@ class Products extends Base
                 'product_id IN (?)',
                 $childIds
             )
-            // order by the oldest selections first so the iterator will end with the most recent link 
+            // order by the oldest selections first so the iterator will end with the most recent link
             ->order('selection_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -606,7 +602,7 @@ class Products extends Base
     /**
      * Bulk version of the native method to retrieve relationships one by one.
      * @see \Magento\GroupedProduct\Model\ResourceModel\Product\Link::getParentIdsByChild
-     * 
+     *
      * @param array $childIds
      * @return array
      */
@@ -615,7 +611,7 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+
         $select = $connection->select()
             ->from(
                 $this->resourceConnection->getTableName('catalog_product_link'),
@@ -629,7 +625,7 @@ class Products extends Base
                 'link_type_id = ?',
                 \Magento\GroupedProduct\Model\ResourceModel\Product\Link::LINK_TYPE_GROUPED
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
+            // order by the oldest links first so the iterator will end with the most recent link
             ->order('link_id ASC');
 
         $result = $connection->fetchAll($select);
@@ -647,7 +643,7 @@ class Products extends Base
     protected function getVariantParentId($item)
     {
         $productId = $this->getArrayKey($item, 'id');
-        
+
         // if the product can be viewed individually, it should not be treated as a variant
         $visibleInSiteVisibilities = [
             \Magento\Catalog\Model\Product\Visibility::VISIBILITY_IN_CATALOG,
@@ -703,8 +699,7 @@ class Products extends Base
 
         if (isset($typeNames[$typeId])) {
             $name = $typeNames[$typeId];
-        }
-        else {
+        } else {
             // Default to uppercased type_id (this should never happen).
             $name = ucwords($typeId);
         }

@@ -1,42 +1,42 @@
 <?php
 
-namespace Ometria\Core\Model\Observer; 
+namespace Ometria\Core\Model\Observer;
 use Magento\Framework\Event\Observer;
 
-class Cart   
+class Cart
 {
     protected $frontendAreaChecker;
     protected $helperProduct;
     protected $helperCookiechannel;
     protected $cartModel;
     protected $storeManager;
-    protected $helperPing;        
+    protected $helperPing;
     protected $helperSession;
-    protected $helperConfig;            
-    
+    protected $helperConfig;
+
     public function __construct(
-        \Ometria\Core\Helper\Product $helperProduct,    
-        \Ometria\Core\Helper\Cookiechannel $helperCookiechannel,            
+        \Ometria\Core\Helper\Product $helperProduct,
+        \Ometria\Core\Helper\Cookiechannel $helperCookiechannel,
         \Ometria\Core\Helper\Is\Frontend $frontendAreaChecker,
         \Magento\Checkout\Model\Cart $cartModel,
         \Magento\Catalog\Model\ProductFactory $productFactory,
         \Magento\Store\Model\StoreManagerInterface $storeManager,
-        \Ometria\Core\Helper\Session $helperSession,        
+        \Ometria\Core\Helper\Session $helperSession,
         \Ometria\Core\Helper\Ping $helperPing,
-        \Ometria\Core\Helper\Config $helperConfig               
+        \Ometria\Core\Helper\Config $helperConfig
     )
     {
         $this->frontendAreaChecker  = $frontendAreaChecker;
         $this->helperProduct        = $helperProduct;
-        $this->helperCookiechannel  = $helperCookiechannel;                
+        $this->helperCookiechannel  = $helperCookiechannel;
         $this->cartModel            = $cartModel;
         $this->productFactory       = $productFactory;
         $this->storeManager         = $storeManager;
         $this->helperPing           = $helperPing;
-        $this->helperSession        = $helperSession;   
-        $this->helperConfig         = $helperConfig;     
+        $this->helperSession        = $helperSession;
+        $this->helperConfig         = $helperConfig;
     }
-    
+
     public function basketUpdated(Observer $observer){
         // Return if admin area or API call
         // if (Mage::app()->getStore()->isAdmin()) return;
@@ -53,10 +53,10 @@ class Cart
 
         //$ometria_product_helper = Mage::helper('ometria/product');
         //$ometria_cookiechannel_helper = Mage::helper('ometria/cookiechannel');
-        
+
         $ometria_product_helper       = $this->helperProduct;
-        $ometria_cookiechannel_helper = $this->helperCookiechannel;                
-        
+        $ometria_cookiechannel_helper = $this->helperCookiechannel;
+
         // $cart = Mage::getModel('checkout/cart')->getQuote();
         $cart = $this->cartModel->getQuote();
 
@@ -115,7 +115,7 @@ class Cart
             $ometria_ping_helper = $this->helperPing;
             $order = $observer->getEvent()->getOrder();
             if(!$order) { return; }
-            
+
             $session_id = $ometria_session_helper->getSessionId();
             if ($session_id) {
                 $ometria_ping_helper->sendPing('transaction', $order->getIncrementId(), array('session'=>$session_id), $order->getStoreId());
@@ -130,12 +130,12 @@ class Cart
                 //assume guest checkout
                 $identify_type = 'guest_checkout';
                 $data = array('e'=>$order->getCustomerEmail());
-                    
-                //if we can get a customer from the order, override above                    
+
+                //if we can get a customer from the order, override above
                 $customer = $order->getCustomer();
                 if ($customer) {
                     $identify_type = 'checkout';
-                    $data = array('e'=>$customer->getEmail(),'i'=>$customer->getId());  
+                    $data = array('e'=>$customer->getEmail(),'i'=>$customer->getId());
                 }
 
                 $command = array('identify', $identify_type, http_build_query($data));
@@ -145,7 +145,7 @@ class Cart
             $this->helperConfig->log($e->getMessage() . ' in ' . __METHOD__);
         }
     }
-    
+
     /**
      * @param \Magento\Quote\Model\Quote\Item $item
      * @return int
@@ -153,7 +153,7 @@ class Cart
     protected function getMasterProductId($item)
     {
         $productIdToLoad = $item->getProductId();
-        
+
         // for Grouped Products, use the Parent Product ID instead of the Child ID
         $superProductConfig = $item->getBuyRequest()->getData('super_product_config');
         if (
@@ -165,7 +165,15 @@ class Cart
                 ? $superProductConfig['product_id']
                 : $productIdToLoad;
         }
-        
+
+        // For configurable products use the Child Product ID instead of the Parent ID
+        if (
+            $item->getProductType() == \Magento\ConfigurableProduct\Model\Product\Type\Configurable::TYPE_CODE
+        ) {
+            $childId = $item->getOptionByCode('simple_product')->getProduct()->getId();
+            $productIdToLoad = !empty($childId) ? $childId : $productIdToLoad;
+        }
+
         return $productIdToLoad;
     }
 }
