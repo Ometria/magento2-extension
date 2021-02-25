@@ -254,8 +254,8 @@ class Orders extends Base
             $item['shipping_address']['state']        = $shipping->getRegion();
             $item['shipping_address']['postcode']     = $shipping->getPostcode();
             $item['shipping_address']['country_code'] = $shipping->getCountryId();
-            $item['billing_address']['firstname']     = $shipping->getFirstname();
-            $item['billing_address']['lastname']      = $shipping->getLastname();
+            $item['billing_address']['firstname']     = $billing->getFirstname();
+            $item['billing_address']['lastname']      = $billing->getLastname();
             $item['billing_address']['city']          = $billing->getCity();
             $item['billing_address']['state']         = $billing->getRegion();
             $item['billing_address']['postcode']      = $billing->getPostcode();
