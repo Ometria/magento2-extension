@@ -392,7 +392,7 @@ class Orders extends Base
      */
     private function formatLineItemDiscount(string $amount)
     {
-        return (int)$amount > 0 ? sprintf('-%s', $amount) : $amount;
+        return (float)$amount > 0 ? sprintf('-%s', $amount) : $amount;
     }
 
     /**
