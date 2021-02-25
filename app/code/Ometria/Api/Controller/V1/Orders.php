@@ -5,6 +5,7 @@ use Magento\Framework\App\Action\Context;
 use Magento\Framework\Controller\Result\Json as ResultJson;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Sales\Api\OrderRepositoryInterface;
+use Magento\Sales\Api\Data\OrderItemInterface;
 use Magento\Sales\Model\Order\AddressFactory as OrderAddressFactory;
 use Magento\Sales\Model\Order\Item as OrderItem;
 use Magento\Sales\Model\ResourceModel\Order\CollectionFactory as OrderCollectionFactory;
@@ -313,6 +314,7 @@ class Orders extends Base
                 continue;
             }
 
+            /** @var OrderItemCollection $lineItems */
             $lineItems = $order->getItemsCollection();
             $indexedParentChild = $this->indexLineItemsByParentAndChild($lineItems);
             $newLineItems = [];
@@ -320,10 +322,11 @@ class Orders extends Base
             foreach ($indexedParentChild as $lineItem) {
                 $new = [
                     "product" => [
-                        "id"    => $lineItem['parent']['product_id'],
-                        "sku"   => $lineItem['parent']['sku'],
-                        "title" => $lineItem['parent']['name'],
-                        "price" => $lineItem['parent']['price']
+                        "id"         => $lineItem['parent']['product_id'],
+                        "sku"        => $lineItem['parent']['sku'],
+                        "title"      => $lineItem['parent']['name'],
+                        "base_price" => $lineItem['parent']['base_price'],
+                        "price"      => $lineItem['parent']['price']
                     ]
                 ];
 
@@ -339,15 +342,37 @@ class Orders extends Base
                 $new["variant_sku"]      = implode(',', $childrenSkus);
                 $new["sku"]              = $lineItem['parent']['sku'];
                 $new["quantity"]         = $lineItem['parent']['qty_ordered'];
+                $new["base_unit_price"]  = $lineItem['parent']['base_price'];
+                $new["base_subtotal"]    = $lineItem['parent']['base_row_total'];
+                $new["base_discount"]    = $this->formatLineItemDiscount($lineItem['parent']['base_discount_amount']);
+                $new["base_tax"]         = $lineItem['parent']['base_tax_amount'];
                 $new["unit_price"]       = $lineItem['parent']['price'];
                 $new["subtotal"]         = $lineItem['parent']['row_total'];
-                $new["discount"]         = $this->formatLineItemDiscount($lineItem['parent']['discount_amount']);
-                $new["discount_percent"] = $lineItem['parent']['discount_percent'];
                 $new["tax"]              = $lineItem['parent']['tax_amount'];
+                $new["discount"]         = $this->formatLineItemDiscount($lineItem['parent']['discount_amount']);
                 $new["tax_percent"]      = $lineItem['parent']['tax_percent'];
+                $new["discount_percent"] = $lineItem['parent']['discount_percent'];
 
-                $_orderItem = $lineItems->getItemById($lineItem['parent']['item_id']);
-                $new["total"] = (string)$this->calculateLineItemTotal($_orderItem);
+                /** @var OrderItemInterface $orderItem */
+                $orderItem = $lineItems->getItemById($lineItem['parent']['item_id']);
+
+                if ($orderItem) {
+                    $new["base_total"] = (string)$this->calculateLineItemTotal(
+                        $orderItem->getBaseRowTotal(),
+                        $orderItem->getBaseDiscountAmount(),
+                        $orderItem->getBaseTaxAmount(),
+                        $orderItem->getBaseDiscountTaxCompensationAmount(),
+                        $this->weeeHelper->getBaseRowWeeeTaxInclTax($orderItem)
+                    );
+
+                    $new["total"] = (string)$this->calculateLineItemTotal(
+                        $orderItem->getRowTotal(),
+                        $orderItem->getDiscountAmount(),
+                        $orderItem->getTaxAmount(),
+                        $orderItem->getDiscountTaxCompensationAmount(),
+                        $this->weeeHelper->getRowWeeeTaxInclTax($orderItem)
+                    );
+                }
 
                 if ($this->_request->getParam('raw') === 'true') {
                     $new['_raw'] = $lineItem;
@@ -364,7 +389,7 @@ class Orders extends Base
     }
 
     /**
-     * @param OrderItemCollection $line_items
+     * @param OrderItemCollection $lineItems
      * @return array
      */
     private function indexLineItemsByParentAndChild(OrderItemCollection $lineItems)
@@ -396,22 +421,20 @@ class Orders extends Base
     }
 
     /**
-     * @param OrderItem $item
-     * @return float|null
-     * @see \Magento\Weee\Block\Item\Price\Renderer::getTotalAmount
+     * @param $rowTotal
+     * @param $discountAmount
+     * @param $taxAmount
+     * @param $discountTax
+     * @param $weeeTax
+     * @return float
      */
-    private function calculateLineItemTotal(OrderItem $item)
+    private function calculateLineItemTotal($rowTotal, $discountAmount, $taxAmount, $discountTax, $weeeTax)
     {
-        // just in case getItemById() returned null
-        if (!$item) {
-            return null;
-        }
-
-        $totalAmount = $item->getRowTotal()
-            - $item->getDiscountAmount()
-            + $item->getTaxAmount()
-            + $item->getDiscountTaxCompensationAmount()
-            + $this->weeeHelper->getRowWeeeTaxInclTax($item);
+        $totalAmount = $rowTotal
+            - $discountAmount
+            + $taxAmount
+            + $discountTax
+            + $weeeTax;
 
         return (float)$totalAmount;
     }
