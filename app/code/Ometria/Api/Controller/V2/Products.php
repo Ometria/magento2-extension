@@ -20,6 +20,7 @@ use Magento\Framework\App\Action\Context;
 use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory;
 use Magento\Tax\Api\Data\QuoteDetailsItemInterfaceFactory;
@@ -83,6 +84,9 @@ class Products extends Action
     /** @var TaxCalculationInterface */
     private $taxCalculationService;
 
+    /** @var PriceCurrencyInterface */
+    private $priceCurrency;
+
     /** @var array */
     private $productCollections = [];
 
@@ -124,6 +128,7 @@ class Products extends Action
      * @param QuoteDetailsInterfaceFactory $quoteDetailsFactory
      * @param QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory
      * @param TaxCalculationInterface $taxCalculationService
+     * @param PriceCurrencyInterface $priceCurrency
      */
     public function __construct(
         Context $context,
@@ -141,7 +146,8 @@ class Products extends Action
         TaxConfig $taxConfig,
         QuoteDetailsInterfaceFactory $quoteDetailsFactory,
         QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory,
-        TaxCalculationInterface $taxCalculationService
+        TaxCalculationInterface $taxCalculationService,
+        PriceCurrencyInterface $priceCurrency
     ) {
         parent::__construct($context);
 
@@ -160,6 +166,7 @@ class Products extends Action
         $this->quoteDetailsFactory = $quoteDetailsFactory;
         $this->quoteDetailsItemFactory = $quoteDetailsItemFactory;
         $this->taxCalculationService = $taxCalculationService;
+        $this->priceCurrency = $priceCurrency;
     }
 
     /**
@@ -519,7 +526,7 @@ class Products extends Action
                 OmetriaProductInterface::STORE_ID => $storeId,
                 OmetriaProductInterface::TITLE => $productInStore->getName(),
                 OmetriaProductInterface::URL => $this->getProductUrl($productInStore),
-                OmetriaProductInterface::STORE_CURRENCY => $this->getStoreCurrency($storeId),
+                OmetriaProductInterface::STORE_CURRENCY => $this->getStoreDefaultCurrency($storeId),
                 OmetriaProductInterface::VISIBILITY => (int) $productInStore->getVisibility(),
                 OmetriaProductInterface::STATUS => (int) $productInStore->getStatus(),
                 OmetriaProductInterface::IMAGE_URL => $this->getImageUrl($productInStore)
@@ -542,26 +549,48 @@ class Products extends Action
     private function appendProductPriceData(&$productData, ProductInterface $product)
     {
         $prices = $product->getPriceInfo()->getPrices();
+        $storeId = $product->getStoreId();
+        $storeCurrency = $this->getStoreDefaultCurrency($storeId);
 
         // Add pricing data to the product data array
         if ($price = $prices->get(RegularPrice::PRICE_CODE)->getValue()) {
-            $productData[OmetriaProductInterface::PRICE] = $price;
+            $productData[OmetriaProductInterface::PRICE] = $this->priceCurrency->convert(
+                $price,
+                $storeId,
+                $storeCurrency
+            );
         }
 
         if ($specialPrice = $prices->get(SpecialPrice::PRICE_CODE)->getValue()) {
-            $productData[OmetriaProductInterface::SPECIAL_PRICE] = $specialPrice;
+            $productData[OmetriaProductInterface::SPECIAL_PRICE] = $this->priceCurrency->convert(
+                $specialPrice,
+                $storeId,
+                $storeCurrency
+            );
         }
 
         if ($finalPrice = $prices->get(FinalPrice::PRICE_CODE)->getValue()) {
-            $productData[OmetriaProductInterface::FINAL_PRICE] = $finalPrice;
+            $productData[OmetriaProductInterface::FINAL_PRICE] = $this->priceCurrency->convert(
+                $finalPrice,
+                $storeId,
+                $storeCurrency
+            );
         }
 
         $taxDetailsItem = $this->getTaxDetails(
             $product
         );
 
-        $productData[OmetriaProductInterface::TAX_AMOUNT] = $taxDetailsItem->getRowTax();
-        $productData[OmetriaProductInterface::FINAL_PRICE_INCL_TAX] = $taxDetailsItem->getPriceInclTax();
+        $productData[OmetriaProductInterface::TAX_AMOUNT] = $this->priceCurrency->convert(
+            $taxDetailsItem->getRowTax(),
+            $storeId,
+            $storeCurrency
+        );
+        $productData[OmetriaProductInterface::FINAL_PRICE_INCL_TAX] = $this->priceCurrency->convert(
+            $taxDetailsItem->getPriceInclTax(),
+            $storeId,
+            $storeCurrency
+        );
     }
 
     /**
@@ -598,13 +627,13 @@ class Products extends Action
      * @param $storeId
      * @return string
      */
-    private function getStoreCurrency($storeId)
+    private function getStoreDefaultCurrency($storeId)
     {
         if (!isset($this->storeCurrencies[$storeId])) {
             $stores = $this->storeManager->getStores();
 
             foreach ($stores as $store) {
-                $this->storeCurrencies[$storeId] = $store->getDefaultCurrency()->getCode();
+                $this->storeCurrencies[$store->getId()] = $store->getDefaultCurrency()->getCode();
             }
         }
 
