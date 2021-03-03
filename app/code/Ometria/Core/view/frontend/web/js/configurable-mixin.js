@@ -19,6 +19,6 @@ define([
             }
         });
 
-        return $.mage.Configurable;
+        return $.mage.configurable;
     }
 });
