@@ -228,8 +228,8 @@ class Product extends AbstractHelper
             return $this->getProductImageUrlV2($preferredProduct, $imageId);
         }
 
-        // No valid preferred product image could be found
-        return null;
+        // Default to trying to use the configurable product's image regardless of UseConfigurableImage config
+        return $this->getProductImageUrlV2($product, $imageId);
     }
 
     /**
