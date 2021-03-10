@@ -9,43 +9,43 @@ class Service
     public function __construct(
 		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
 		\Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,
-		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor    
+		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor
     )
     {
 		$this->searchCriteria         = $searchCriteria;
 		$this->helperOmetriaApiFilter = $helperOmetriaApiFilter;
-		$this->dataObjectProcessor    = $dataObjectProcessor;    
+		$this->dataObjectProcessor    = $dataObjectProcessor;
     }
-    
-    public function createResponse($repository, $serialize_as)
+
+    /**
+     * @param $repository
+     * @param $serializeAs
+     * @return array
+     */
+    public function createResponse($repository, $serializeAs)
     {
         $searchCriteria = $this->helperOmetriaApiFilter
             ->applyFilertsToSearchCriteria($this->searchCriteria);
-            
+
         $list = $repository->getList($searchCriteria);
 
         $items = [];
-        foreach($list->getItems() as $item)
-        {
-            $new;
-            if($serialize_as)
-            {
+
+        foreach($list->getItems() as $item) {
+            if ($serializeAs) {
                 $new = $this->dataObjectProcessor->buildOutputDataArray(
                     $item,
-                    $serialize_as                
-                );        
-            }            
-            else if(is_callable([$item, 'getData']))
-            {
+                    $serializeAs
+                );
+            } else if(is_callable([$item, 'getData'])) {
                 $new = $item->getData();
-            }
-            else
-            {
+            } else {
                 $new = $item;
             }
+
             $items[] = $new;
         }
-        
-        return $items;    
+
+        return $items;
     }
 }
