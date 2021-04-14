@@ -22,7 +22,6 @@ use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\NoSuchEntityException;
-use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Store\Model\App\Emulation as AppEmulation;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory;
@@ -87,9 +86,6 @@ class Products extends Action
     /** @var TaxCalculationInterface */
     private $taxCalculationService;
 
-    /** @var PriceCurrencyInterface */
-    private $priceCurrency;
-
     /** @var HttpContext */
     private $httpContext;
 
@@ -137,9 +133,8 @@ class Products extends Action
      * @param QuoteDetailsInterfaceFactory $quoteDetailsFactory
      * @param QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory
      * @param TaxCalculationInterface $taxCalculationService
-     * @param PriceCurrencyInterface $priceCurrency
-     * @param InventoryService $inventoryService
      * @param HttpContext $httpContext
+     * @param AppEmulation $appEmulation
      */
     public function __construct(
         Context $context,
@@ -158,7 +153,6 @@ class Products extends Action
         QuoteDetailsInterfaceFactory $quoteDetailsFactory,
         QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory,
         TaxCalculationInterface $taxCalculationService,
-        PriceCurrencyInterface $priceCurrency,
         HttpContext $httpContext,
         AppEmulation $appEmulation
     ) {
@@ -179,7 +173,6 @@ class Products extends Action
         $this->quoteDetailsFactory = $quoteDetailsFactory;
         $this->quoteDetailsItemFactory = $quoteDetailsItemFactory;
         $this->taxCalculationService = $taxCalculationService;
-        $this->priceCurrency = $priceCurrency;
         $this->httpContext = $httpContext;
         $this->appEmulation = $appEmulation;
     }
