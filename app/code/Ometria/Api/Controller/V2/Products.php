@@ -130,6 +130,7 @@ class Products extends Action
      * @param PriceCurrencyInterface $priceCurrency
      * @param InventoryService $inventoryService
      * @param HttpContext $httpContext
+     * @param AppEmulation $appEmulation
      */
     public function __construct(
         Context $context,
@@ -561,25 +562,17 @@ class Products extends Action
         $priceInfo = $product->getPriceInfo();
 
         // Add regular price data to the product data array
-        if ($price = $priceInfo->getPrice(RegularPrice::PRICE_CODE)->getValue()) {
-            $productData[OmetriaProductInterface::PRICE] = $this->priceCurrency->convert(
-                $price,
-                $storeId,
-                $storeCurrency
-            );
+        if ($price = $priceInfo->getPrice(RegularPrice::PRICE_CODE)->getAmount()->getValue()) {
+            $productData[OmetriaProductInterface::PRICE] = $price;
         }
 
         // Add special price data to the product data array
-        if ($specialPrice = $priceInfo->getPrice(SpecialPrice::PRICE_CODE)->getValue()) {
-            $productData[OmetriaProductInterface::SPECIAL_PRICE] = $this->priceCurrency->convert(
-                $specialPrice,
-                $storeId,
-                $storeCurrency
-            );
+        if ($specialPrice = $priceInfo->getPrice(SpecialPrice::PRICE_CODE)->getAmount()->getValue()) {
+            $productData[OmetriaProductInterface::SPECIAL_PRICE] = $specialPrice;
         }
 
-        // Add final price data to the product data array (this is currency converted internally)
-        if ($finalPrice = $priceInfo->getPrice(FinalPrice::PRICE_CODE)->getValue()) {
+        // Add final price data to the product data array
+        if ($finalPrice = $priceInfo->getPrice(FinalPrice::PRICE_CODE)->getAmount()->getValue()) {
             $productData[OmetriaProductInterface::FINAL_PRICE] = $finalPrice;
         }
 
