@@ -3,8 +3,14 @@ namespace Ometria\Api\Controller\V1;
 
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
+use Magento\Catalog\Pricing\Price\FinalPrice;
+use Magento\Catalog\Pricing\Price\RegularPrice;
+use Magento\Catalog\Pricing\Price\SpecialPrice;
 use Magento\CatalogInventory\Api\StockRegistryInterface;
+use Magento\Framework\App\Area as AppArea;
+use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Store\Model\App\Emulation as AppEmulation;
 use Ometria\Api\Helper\Filter\V1\Service as FilterService;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
 
@@ -35,6 +41,12 @@ class Products extends Base
 
     /** @var StockRegistryInterface */
     private $stockRegistry;
+
+    /** @var HttpContext */
+    private $httpContext;
+
+    /** @var AppEmulation */
+    private $appEmulation;
 
     protected $storeIdCache=false;
     protected $productTypeFactory;
@@ -72,7 +84,9 @@ class Products extends Base
         \Magento\Directory\Helper\Data $directoryHelper,
         \Ometria\Api\Helper\StoreUrl $storeUrlHelper,
         \Magento\Catalog\Model\Product\TypeFactory $productTypeFactory,
-        StockRegistryInterface $stockRegistry
+        StockRegistryInterface $stockRegistry,
+        HttpContext $httpContext,
+        AppEmulation $appEmulation
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -94,6 +108,8 @@ class Products extends Base
 		$this->storeUrlHelper             = $storeUrlHelper;
         $this->productTypeFactory         = $productTypeFactory;
         $this->stockRegistry              = $stockRegistry;
+        $this->httpContext                = $httpContext;
+        $this->appEmulation               = $appEmulation;
 	}
 
     public function execute()
@@ -374,7 +390,7 @@ class Products extends Base
     }
 
 
-    protected function getProductListingsForStore($store, $productIds, $store_listings)
+    protected function getProductListingsForStore($store, $productIds, $storeListings)
     {
         $storeId = $store->getId();
 
@@ -392,8 +408,8 @@ class Products extends Base
             $this->getRequest()->getParam('product_image', 'image')
         );
 
-        $base_currency = $store->getBaseCurrency()->getCode();
-        $store_currency = $store->getDefaultCurrency()->getCode();
+        $baseCurrency = $store->getBaseCurrency()->getCode();
+        $storeCurrency = $store->getDefaultCurrency()->getCode();
 
         foreach ($items as $item) {
             $id = $item['id'];
@@ -402,57 +418,57 @@ class Products extends Base
                 'store_id' => $storeId,
                 'title' => $item['name'],
                 'url' => $url,
-                'store_currency' => $store_currency,
+                'store_currency' => $storeCurrency,
                 'visibility' => $item['visibility'],
                 'status' => $item['status'],
                 'image_url' => $item['image_url']
-                );
+            );
 
-            $tmp = $this->appendPricing($id, $tmp, $storeId, $base_currency, $store_currency);
+            $tmp = $this->appendPricing($id, $tmp, $storeId, $baseCurrency, $storeCurrency);
 
-            $store_listings[$id][$storeId] = $tmp;
+            $storeListings[$id][$storeId] = $tmp;
         }
 
-        return $store_listings;
+        return $storeListings;
     }
 
-    protected function appendPricing($product_id, $item, $storeId = null, $base_currency = null, $store_currency = null)
+    protected function appendPricing($productId, $item, $storeId = null, $baseCurrency = null, $storeCurrency = null)
     {
-        $store_price = $this->getProductPrice(
-            $product_id,
+        $storePrice = $this->getProductPrice(
+            $productId,
             $storeId,
-            \Magento\Catalog\Pricing\Price\RegularPrice::PRICE_CODE,
-            $base_currency,
-            $store_currency
+            RegularPrice::PRICE_CODE,
+            $baseCurrency,
+            $storeCurrency
         );
 
-        if ($store_price) {
-            $item['price'] = $store_price;
+        if ($storePrice) {
+            $item['price'] = $storePrice;
         }
 
-        $store_special_price = $this->getProductPrice(
-            $product_id,
+        $storeSpecialPrice = $this->getProductPrice(
+            $productId,
             $storeId,
-            \Magento\Catalog\Pricing\Price\SpecialPrice::PRICE_CODE,
-            $base_currency,
-            $store_currency
+            SpecialPrice::PRICE_CODE,
+            $baseCurrency,
+            $storeCurrency
         );
 
-        if ($store_special_price) {
-            $item['special_price'] = $store_special_price;
+        if ($storeSpecialPrice) {
+            $item['special_price'] = $storeSpecialPrice;
         }
 
         if ($this->_request->getParam('final_price') === 'true') {
-            $store_final_price = $this->getProductPrice(
-                $product_id,
+            $storeFinalPrice = $this->getProductPrice(
+                $productId,
                 $storeId,
-                \Magento\Catalog\Pricing\Price\FinalPrice::PRICE_CODE,
-                $base_currency,
-                $store_currency
+                FinalPrice::PRICE_CODE,
+                $baseCurrency,
+                $storeCurrency
             );
 
-            if ($store_final_price) {
-                $item['final_price'] = $store_final_price;
+            if ($storeFinalPrice) {
+                $item['final_price'] = $storeFinalPrice;
             }
         }
 
@@ -482,27 +498,45 @@ class Products extends Base
     }
 
     protected function getProductPrice(
-        $product_id,
+        $productId,
         $storeId,
-        $price_code,
-        $base_currency = null,
-        $store_currency = null
+        $priceCode,
+        $baseCurrency = null,
+        $storeCurrency = null
     ) {
-        $product = $this->productRepository->getById($product_id, false, $storeId);
+        // Override HTTP currency value to ensure Magento internals use correct store currency
+        $beforeCurrency = $this->httpContext->getValue(HttpContext::CONTEXT_CURRENCY);
+        $this->httpContext->setValue(HttpContext::CONTEXT_CURRENCY, $storeCurrency, null);
 
-        $price = $product->getPriceInfo()->getPrice($price_code)->getValue();
+        $product = $this->productRepository->getById($productId, false, $storeId);
 
-        if ($store_currency && $base_currency) {
+        // Emulate store as required to ensure Magento internals use correct store currency
+        $this->appEmulation->startEnvironmentEmulation(
+            $product->getStoreId(),
+            AppArea::AREA_FRONTEND,
+            true
+        );
+
+        $price = $product->getPriceInfo()->getPrice($priceCode)->getValue();
+
+        // Final price is already converted so skip it here
+        if ($priceCode != FinalPrice::PRICE_CODE && $storeCurrency && $baseCurrency) {
             try {
                 $price = $this->directoryHelper->currencyConvert(
                     $price,
-                    $base_currency,
-                    $store_currency
+                    $baseCurrency,
+                    $storeCurrency
                 );
             } catch (\Exception $e) {
                 // Allow the "undefined rate" exception and return the price as is if no rate has been setup.
             }
         }
+
+        // Stop emulating store
+        $this->appEmulation->stopEnvironmentEmulation();
+
+        // Reset HTTP currency value to before value
+        $this->httpContext->setValue(HttpContext::CONTEXT_CURRENCY, $beforeCurrency, $beforeCurrency);
 
         return $price;
     }
