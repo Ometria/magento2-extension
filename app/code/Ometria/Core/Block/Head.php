@@ -3,6 +3,7 @@ namespace Ometria\Core\Block;
 use stdClass;
 use Magento\Store\Model\ScopeInterface;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
+use Ometria\Core\Service\Product\Inventory as InventoryService;
 
 class Head extends \Magento\Framework\View\Element\Template
 {
@@ -30,8 +31,8 @@ class Head extends \Magento\Framework\View\Element\Template
     protected $checkoutModelCart;
     protected $checkoutModelSession;
     protected $salesModelOrder;
-    protected $stockRegistry;
     protected $query;
+    private $inventoryService;
 
     public function __construct(
         \Magento\Framework\View\Element\Template\Context $context,
@@ -42,10 +43,9 @@ class Head extends \Magento\Framework\View\Element\Template
         \Magento\Checkout\Model\Session $checkoutModelSession,
         \Magento\Sales\Model\OrderFactory $salesModelOrderFactory,
         \Magento\Search\Model\QueryInterface $query,
-        \Magento\CatalogInventory\Api\StockRegistryInterface $stockRegistry,
+        InventoryService $inventoryService,
         array $data = []
-    )
-    {
+    ) {
         $this->query                            = $query;
         $this->salesModelOrderFactory           = $salesModelOrderFactory;
         $this->checkoutModelCart                = $checkoutModelCart;
@@ -55,7 +55,7 @@ class Head extends \Magento\Framework\View\Element\Template
         $this->coreHelperProduct                = $coreHelperProduct;
         $this->catalogModelProductFactory       = $catalogModelProductFactory;
         $this->magentoFrameworkRegistry         = $magentoFrameworkRegistry;
-        $this->stockRegistry                    = $stockRegistry;
+        $this->inventoryService                 = $inventoryService;
         $this->magentoFrameworkUrlInterface     = $context->getUrlBuilder();
         $this->storeModelStoreManagerInterface  = $context->getStoreManager();
         $this->scopeConfig                      = $context->getScopeConfig();
@@ -184,16 +184,6 @@ class Head extends \Magento\Framework\View\Element\Template
 
     /**
      * @param $product
-     * @return bool
-     */
-    protected function _getProductInStock($product)
-    {
-        $stock = $this->stockRegistry->getStockItem($product->getId());
-        return (boolean) $stock->getIsInStock();
-    }
-
-    /**
-     * @param $product
      * @return array|bool
      */
     protected function _getProductInfo($product)
@@ -204,7 +194,7 @@ class Head extends \Magento\Framework\View\Element\Template
                 'sku'       => $product->getSku(),
                 'name'      => $product->getName(),
                 'url'       => $product->getProductUrl(),
-                'in_stock'  => $this->_getProductInStock($product)
+                'in_stock'  => $this->inventoryService->getStockStatus($product)
             );
 
             /**

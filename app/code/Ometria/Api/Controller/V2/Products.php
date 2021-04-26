@@ -11,9 +11,6 @@ use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductColl
 use Magento\Catalog\Pricing\Price\FinalPrice;
 use Magento\Catalog\Pricing\Price\RegularPrice;
 use Magento\Catalog\Pricing\Price\SpecialPrice;
-use Magento\CatalogInventory\Api\Data\StockItemInterface;
-use Magento\CatalogInventory\Api\StockRegistryInterface;
-use Magento\CatalogInventory\Helper\Stock as StockHelper;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
@@ -35,14 +32,12 @@ use Ometria\Api\Api\Data\ProductInterface as OmetriaProductInterface;
 use Ometria\Api\Helper\Filter\V2\Service;
 use Ometria\Api\Model\ResourceModel\Product as ProductResource;
 use Ometria\Core\Helper\Product as ProductHelper;
+use Ometria\Core\Service\Product\Inventory as InventoryService;
 
 class Products extends Action
 {
     /** @var ProductCollectionFactory */
     private $productCollectionFactory;
-
-    /** @var StockRegistryInterface */
-    private $stockRegistry;
 
     /** @var ProductResource */
     private $productResource;
@@ -64,9 +59,6 @@ class Products extends Action
 
     /** @var ProductHelper */
     private $productHelper;
-
-    /** @var StockHelper */
-    private $stockHelper;
 
     /** @var Service */
     private $serviceV2;
@@ -119,60 +111,57 @@ class Products extends Action
     /**
      * @param Context $context
      * @param ProductCollectionFactory $productCollectionFactory
-     * @param StockRegistryInterface $stockRegistry
      * @param ProductResource $productResource
      * @param ProductAttributeRepositoryInterface $attributeRepository
      * @param CategoryRepository $categoryRepository
      * @param TypeFactory $typeFactory
      * @param StoreManagerInterface $storeManager
      * @param ProductHelper $productHelper
-     * @param StockHelper $stockHelper
      * @param Service $serviceV2
      * @param TaxClassKeyInterfaceFactory $taxClassKeyFactory
      * @param TaxConfig $taxConfig
      * @param QuoteDetailsInterfaceFactory $quoteDetailsFactory
      * @param QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory
      * @param TaxCalculationInterface $taxCalculationService
+     * @param InventoryService $inventoryService
      * @param HttpContext $httpContext
      * @param AppEmulation $appEmulation
      */
     public function __construct(
         Context $context,
         ProductCollectionFactory $productCollectionFactory,
-        StockRegistryInterface $stockRegistry,
         ProductResource $productResource,
         ProductAttributeRepositoryInterface $attributeRepository,
         CategoryRepository $categoryRepository,
         TypeFactory $typeFactory,
         StoreManagerInterface $storeManager,
         ProductHelper $productHelper,
-        StockHelper $stockHelper,
         Service $serviceV2,
         TaxClassKeyInterfaceFactory $taxClassKeyFactory,
         TaxConfig $taxConfig,
         QuoteDetailsInterfaceFactory $quoteDetailsFactory,
         QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory,
         TaxCalculationInterface $taxCalculationService,
+        InventoryService $inventoryService,
         HttpContext $httpContext,
         AppEmulation $appEmulation
     ) {
         parent::__construct($context);
 
         $this->productCollectionFactory = $productCollectionFactory;
-        $this->stockRegistry = $stockRegistry;
         $this->productResource = $productResource;
         $this->attributeRepository = $attributeRepository;
         $this->categoryRepository = $categoryRepository;
         $this->typeFactory = $typeFactory;
         $this->storeManager = $storeManager;
         $this->productHelper = $productHelper;
-        $this->stockHelper = $stockHelper;
         $this->serviceV2 = $serviceV2;
         $this->taxClassKeyFactory = $taxClassKeyFactory;
         $this->taxConfig = $taxConfig;
         $this->quoteDetailsFactory = $quoteDetailsFactory;
         $this->quoteDetailsItemFactory = $quoteDetailsItemFactory;
         $this->taxCalculationService = $taxCalculationService;
+        $this->inventoryService = $inventoryService;
         $this->httpContext = $httpContext;
         $this->appEmulation = $appEmulation;
     }
@@ -207,7 +196,10 @@ class Products extends Action
             $collection->addAttributeToSelect('*');
             $this->serviceV2->applyFiltersToCollection($collection);
 
-            $this->stockHelper->addIsInStockFilterToCollection($collection);
+            // Add in stock filter to collection if MSI not enabled (MSI does this on collection load)
+            if (!$this->inventoryService->isMSIAvailable()) {
+                $this->inventoryService->addLegacyStockFilterToCollection($collection);
+            }
 
             // Add product store filter
             $collection->addStoreFilter($storeId);
@@ -275,7 +267,6 @@ class Products extends Action
      */
     private function getProductData(ProductInterface $product)
     {
-        $stockItem = $this->getStockItem($product);
         $parentId = $this->getParentId($product);
 
         // This is only required to maintain parity with V1 API property ordering, rather than just
@@ -293,8 +284,8 @@ class Products extends Action
         $productData[OmetriaProductInterface::ATTRIBUTES] = $this->getAttributes($product);
         $productData[OmetriaProductInterface::IS_ACTIVE] = (bool) $product->getStatus();
         $productData[OmetriaProductInterface::STORES] = $product->getStoreIds();
-        $productData[OmetriaProductInterface::IS_IN_STOCK] = (string) $stockItem->getIsInStock();
-        $productData[OmetriaProductInterface::QTY] = (float) $stockItem->getManageStock() ? $stockItem->getQty() : 0;
+        $productData[OmetriaProductInterface::IS_IN_STOCK] = $this->inventoryService->getStockStatus($product);
+        $productData[OmetriaProductInterface::QTY] = $this->inventoryService->getSalableQuantity($product);
 
         $this->appendProductPriceData($productData, $product);
 
@@ -308,16 +299,7 @@ class Products extends Action
 
     /**
      * @param ProductInterface $product
-     * @return StockItemInterface
-     */
-    private function getStockItem(ProductInterface $product)
-    {
-        return $this->stockRegistry->getStockItem($product->getId());
-    }
-
-    /**
-     * @param ProductInterface $product
-     * @return |null
+     * @return string|null
      */
     private function getImageUrl(ProductInterface $product)
     {
@@ -582,7 +564,7 @@ class Products extends Action
             $productData[OmetriaProductInterface::SPECIAL_PRICE] = $specialPrice;
         }
 
-        // Add final price data to the product data array (this is currency converted internally)
+        // Add final price data to the product data array
         if ($finalPrice = $priceInfo->getPrice(FinalPrice::PRICE_CODE)->getAmount()->getValue()) {
             $productData[OmetriaProductInterface::FINAL_PRICE] = $finalPrice;
         }
