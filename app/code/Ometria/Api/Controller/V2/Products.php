@@ -17,9 +17,12 @@ use Magento\CatalogInventory\Helper\Stock as StockHelper;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
+use Magento\Framework\App\Area as AppArea;
+use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Store\Model\App\Emulation as AppEmulation;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Tax\Api\Data\QuoteDetailsInterfaceFactory;
 use Magento\Tax\Api\Data\QuoteDetailsItemInterfaceFactory;
@@ -83,6 +86,12 @@ class Products extends Action
     /** @var TaxCalculationInterface */
     private $taxCalculationService;
 
+    /** @var HttpContext */
+    private $httpContext;
+
+    /** @var AppEmulation */
+    private $appEmulation;
+
     /** @var array */
     private $productCollections = [];
 
@@ -124,6 +133,8 @@ class Products extends Action
      * @param QuoteDetailsInterfaceFactory $quoteDetailsFactory
      * @param QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory
      * @param TaxCalculationInterface $taxCalculationService
+     * @param HttpContext $httpContext
+     * @param AppEmulation $appEmulation
      */
     public function __construct(
         Context $context,
@@ -141,7 +152,9 @@ class Products extends Action
         TaxConfig $taxConfig,
         QuoteDetailsInterfaceFactory $quoteDetailsFactory,
         QuoteDetailsItemInterfaceFactory $quoteDetailsItemFactory,
-        TaxCalculationInterface $taxCalculationService
+        TaxCalculationInterface $taxCalculationService,
+        HttpContext $httpContext,
+        AppEmulation $appEmulation
     ) {
         parent::__construct($context);
 
@@ -160,6 +173,8 @@ class Products extends Action
         $this->quoteDetailsFactory = $quoteDetailsFactory;
         $this->quoteDetailsItemFactory = $quoteDetailsItemFactory;
         $this->taxCalculationService = $taxCalculationService;
+        $this->httpContext = $httpContext;
+        $this->appEmulation = $appEmulation;
     }
 
     /**
@@ -519,7 +534,7 @@ class Products extends Action
                 OmetriaProductInterface::STORE_ID => $storeId,
                 OmetriaProductInterface::TITLE => $productInStore->getName(),
                 OmetriaProductInterface::URL => $this->getProductUrl($productInStore),
-                OmetriaProductInterface::STORE_CURRENCY => $this->getStoreCurrency($storeId),
+                OmetriaProductInterface::STORE_CURRENCY => $this->getStoreDefaultCurrency($storeId),
                 OmetriaProductInterface::VISIBILITY => (int) $productInStore->getVisibility(),
                 OmetriaProductInterface::STATUS => (int) $productInStore->getStatus(),
                 OmetriaProductInterface::IMAGE_URL => $this->getImageUrl($productInStore)
@@ -541,34 +556,58 @@ class Products extends Action
      */
     private function appendProductPriceData(&$productData, ProductInterface $product)
     {
-        $prices = $product->getPriceInfo()->getPrices();
+        $storeId = $product->getStoreId();
+        $storeCurrency = $this->getStoreDefaultCurrency($storeId);
 
-        // Add pricing data to the product data array
-        if ($price = $prices->get(RegularPrice::PRICE_CODE)->getValue()) {
+        // Override HTTP currency value to ensure Magento internals use correct store currency
+        $beforeCurrency = $this->httpContext->getValue(HttpContext::CONTEXT_CURRENCY);
+        $this->httpContext->setValue(HttpContext::CONTEXT_CURRENCY, $storeCurrency, null);
+
+        // Emulate store as required to ensure Magento internals use correct store currency
+        $this->appEmulation->startEnvironmentEmulation(
+            $storeId,
+            AppArea::AREA_FRONTEND,
+            true
+        );
+
+        $priceInfo = $product->getPriceInfo();
+
+        // Add regular price data to the product data array
+        if ($price = $priceInfo->getPrice(RegularPrice::PRICE_CODE)->getAmount()->getValue()) {
             $productData[OmetriaProductInterface::PRICE] = $price;
         }
 
-        if ($specialPrice = $prices->get(SpecialPrice::PRICE_CODE)->getValue()) {
+        // Add special price data to the product data array
+        if ($specialPrice = $priceInfo->getPrice(SpecialPrice::PRICE_CODE)->getAmount()->getValue()) {
             $productData[OmetriaProductInterface::SPECIAL_PRICE] = $specialPrice;
         }
 
-        if ($finalPrice = $prices->get(FinalPrice::PRICE_CODE)->getValue()) {
+        // Add final price data to the product data array (this is currency converted internally)
+        if ($finalPrice = $priceInfo->getPrice(FinalPrice::PRICE_CODE)->getAmount()->getValue()) {
             $productData[OmetriaProductInterface::FINAL_PRICE] = $finalPrice;
         }
 
         $taxDetailsItem = $this->getTaxDetails(
-            $product
+            $product,
+            $finalPrice
         );
 
         $productData[OmetriaProductInterface::TAX_AMOUNT] = $taxDetailsItem->getRowTax();
         $productData[OmetriaProductInterface::FINAL_PRICE_INCL_TAX] = $taxDetailsItem->getPriceInclTax();
+
+        // Stop emulating store
+        $this->appEmulation->stopEnvironmentEmulation();
+
+        // Reset HTTP currency value to before value
+        $this->httpContext->setValue(HttpContext::CONTEXT_CURRENCY, $beforeCurrency, $beforeCurrency);
     }
 
     /**
      * @param $product
+     * @param $finalPrice
      * @return TaxDetailsItemInterface
      */
-    public function getTaxDetails($product)
+    public function getTaxDetails($product, $finalPrice)
     {
         $priceIncludesTax = $this->taxConfig->priceIncludesTax($product->getStoreId());
 
@@ -582,7 +621,7 @@ class Products extends Action
             ->setTaxClassKey($taxClassKey)
             ->setIsTaxIncluded($priceIncludesTax)
             ->setType('product')
-            ->setUnitPrice($product->getFinalPrice());
+            ->setUnitPrice($finalPrice);
 
         $quoteDetails = $this->quoteDetailsFactory->create();
         $quoteDetails->setItems([$item]);
@@ -598,13 +637,13 @@ class Products extends Action
      * @param $storeId
      * @return string
      */
-    private function getStoreCurrency($storeId)
+    private function getStoreDefaultCurrency($storeId)
     {
         if (!isset($this->storeCurrencies[$storeId])) {
             $stores = $this->storeManager->getStores();
 
             foreach ($stores as $store) {
-                $this->storeCurrencies[$storeId] = $store->getDefaultCurrency()->getCode();
+                $this->storeCurrencies[$store->getId()] = $store->getDefaultCurrency()->getCode();
             }
         }
 
