@@ -569,6 +569,7 @@ class Products extends Action
             $productData[OmetriaProductInterface::FINAL_PRICE] = $finalPrice;
         }
 
+        // Add tax data to the product data array (this is currency converted internally)
         $taxDetailsItem = $this->getTaxDetails(
             $product,
             $finalPrice
