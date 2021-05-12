@@ -9,6 +9,7 @@
 			</general>
 			<advanced>
 				<univar>1</univar>
+                <pageview_on_variant>1</pageview_on_variant>
 				<ping>1</ping>
 				<debug>0</debug>
 				<productmode>id</productmode>

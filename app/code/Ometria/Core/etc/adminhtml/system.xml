@@ -31,6 +31,11 @@
 					<label>Include Data Layer</label>
 					<source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
 				</field>
+                <field id="pageview_on_variant" translate="label comment" type="select" sortOrder="15" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Trigger Ometria Page View on variant selection</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>This applies to configurable/swatch products, should Ometria record a page view on each variant selection.</comment>
+                </field>
 				<field id="ping" translate="label" type="select" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
 					<label>Ping Ometria on record update</label>
 					<source_model>Magento\Config\Model\Config\Source\Yesno</source_model>

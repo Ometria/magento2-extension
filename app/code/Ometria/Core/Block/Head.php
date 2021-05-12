@@ -1,11 +1,24 @@
 <?php
 namespace Ometria\Core\Block;
-use stdClass;
-use Magento\Store\Model\ScopeInterface;
+
+use Magento\Catalog\Model\Product as ProductModel;
+use Magento\Catalog\Model\ProductFactory;
+use Magento\Checkout\Model\Cart;
+use Magento\Checkout\Model\Session;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
+use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Framework\Registry;
+use Magento\Framework\View\Element\Template;
+use Magento\Framework\View\Element\Template\Context;
+use Magento\Sales\Model\OrderFactory;
+use Magento\Search\Model\QueryFactory;
+use Magento\Search\Model\QueryInterface;
+use Magento\Store\Model\ScopeInterface;
+use Ometria\Core\Helper\Product as ProductHelper;
 use Ometria\Core\Service\Product\Inventory as InventoryService;
 
-class Head extends \Magento\Framework\View\Element\Template
+class Head extends Template
 {
     const PAGE_TYPE_BASKET       = 'basket';
     const PAGE_TYPE_CHECKOUT     = 'checkout';
@@ -22,35 +35,48 @@ class Head extends \Magento\Framework\View\Element\Template
     const OM_PAGE_TYPE           = 'type';
     const OM_PAGE_DATA           = 'data';
 
-    protected $scopeConfig;
-    protected $storeModelStoreManagerInterface;
-    protected $magentoFrameworkUrlInterface;
-    protected $magentoFrameworkRegistry;
-    protected $catalogModelProductFactory;
-    protected $frameworkAppRequestInterface;
-    protected $checkoutModelCart;
-    protected $checkoutModelSession;
-    protected $salesModelOrder;
-    protected $query;
+    private $scopeConfig;
+    private $storeModelStoreManagerInterface;
+    private $magentoFrameworkUrlInterface;
+    private $magentoFrameworkRegistry;
+    private $catalogModelProductFactory;
+    private $frameworkAppRequestInterface;
+    private $checkoutModelCart;
+    private $checkoutModelSession;
+    private $salesModelOrder;
+    private $query;
     private $inventoryService;
 
+    /**
+     * @param Context $context
+     * @param Registry $magentoFrameworkRegistry
+     * @param ProductFactory $catalogModelProductFactory
+     * @param ProductHelper $coreHelperProduct
+     * @param Cart $checkoutModelCart
+     * @param Session $checkoutModelSession
+     * @param OrderFactory $salesModelOrderFactory
+     * @param QueryInterface $query
+     * @param InventoryService $inventoryService
+     * @param array $data
+     */
     public function __construct(
-        \Magento\Framework\View\Element\Template\Context $context,
-        \Magento\Framework\Registry $magentoFrameworkRegistry,
-        \Magento\Catalog\Model\ProductFactory $catalogModelProductFactory,
-        \Ometria\Core\Helper\Product $coreHelperProduct,
-        \Magento\Checkout\Model\Cart $checkoutModelCart,
-        \Magento\Checkout\Model\Session $checkoutModelSession,
-        \Magento\Sales\Model\OrderFactory $salesModelOrderFactory,
-        \Magento\Search\Model\QueryInterface $query,
+        Context $context,
+        Registry $magentoFrameworkRegistry,
+        ProductFactory $catalogModelProductFactory,
+        ProductHelper $coreHelperProduct,
+        Cart $checkoutModelCart,
+        Session $checkoutModelSession,
+        OrderFactory $salesModelOrderFactory,
+        QueryInterface $query,
         InventoryService $inventoryService,
         array $data = []
     ) {
+        parent::__construct($context, $data);
+
         $this->query                            = $query;
         $this->salesModelOrderFactory           = $salesModelOrderFactory;
         $this->checkoutModelCart                = $checkoutModelCart;
         $this->checkoutModelSession             = $checkoutModelSession;
-
         $this->frameworkAppRequestInterface     = $context->getRequest();
         $this->coreHelperProduct                = $coreHelperProduct;
         $this->catalogModelProductFactory       = $catalogModelProductFactory;
@@ -59,22 +85,44 @@ class Head extends \Magento\Framework\View\Element\Template
         $this->magentoFrameworkUrlInterface     = $context->getUrlBuilder();
         $this->storeModelStoreManagerInterface  = $context->getStoreManager();
         $this->scopeConfig                      = $context->getScopeConfig();
-        return parent::__construct($context, $data);
     }
 
+    /**
+     * @return string
+     */
     public function getAPIKey()
     {
-        return $this->scopeConfig->getValue(
+        return (string) $this->scopeConfig->getValue(
             'ometria/general/apikey',
             ScopeInterface::SCOPE_STORE
         );
     }
 
+    /**
+     * @return bool
+     */
     public function isUnivarEnabled()
     {
-        return $this->scopeConfig->getValue('ometria/advanced/univar');
+        return $this->scopeConfig->isSetFlag(
+            'ometria/advanced/univar',
+            ScopeInterface::SCOPE_STORE
+        );
     }
 
+    /**
+     * @return bool
+     */
+    public function pageViewOnVariantEnabled()
+    {
+        return $this->scopeConfig->isSetFlag(
+            'ometria/advanced/pageview_on_variant',
+            ScopeInterface::SCOPE_STORE
+        );
+    }
+
+    /**
+     * @return array
+     */
     public function getDataLayer()
     {
         $category = 'null';
@@ -88,29 +136,26 @@ class Head extends \Magento\Framework\View\Element\Template
 
         if ($this->_isHomepage()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_HOMEPAGE;
-
         } elseif ($this->_isCMSPage()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_CMS;
-
         } elseif ($this->_isCategory()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_CATEGORY;
-
         } elseif ($this->_isSearch()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_SEARCH;
-
-            if($query = $this->_getSearchQuery()) $page[self::OM_QUERY] = $query;
-
+            if ($query = $this->_getSearchQuery()) {
+                $page[self::OM_QUERY] = $query;
+            }
         } elseif ($this->_isProduct()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_PRODUCT;
             $page[self::OM_PAGE_DATA] = $this->_getProductPageData();
             $page[self::OM_PRODUCT_MAP] = $this->_getProductMappingData();
         } elseif ($this->_isBasket()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_BASKET;
-
         } elseif ($this->_isCheckout()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_CHECKOUT;
-            if ($step = $this->_getCheckoutStep()) $page[self::OM_PAGE_DATA] = array('step'=>$step);
-
+            if ($step = $this->_getCheckoutStep()) {
+                $page[self::OM_PAGE_DATA] = array('step'=>$step);
+            }
         } elseif ($this->_isOrderConfirmation()) {
             $page[self::OM_PAGE_TYPE] = self::PAGE_TYPE_CONFIRMATION;
             $page[self::OM_PAGE_DATA] = $this->_getOrderData();
@@ -120,58 +165,16 @@ class Head extends \Magento\Framework\View\Element\Template
             $page['category'] = array(
                 'id'=>$category->getId(),
                 'path'=>$category->getUrlPath()
-                );
+            );
         }
 
         return $page;
     }
 
-    protected function _isHomepage() {
-        return $this->getUrl('') == $this->getUrl('*/*/*', array('_current'=>true, '_use_rewrite'=>true));
-    }
-
-    protected function _getStore() {
-        return $this->storeModelStoreManagerInterface->getStore()->getStoreId();
-    }
-
-    protected function _getCurrencyCode() {
-        return $this->storeModelStoreManagerInterface->getStore()->getCurrentCurrency()->getCode();
-    }
-
-    protected function _getRouteName() {
-        return $this->getRequest()->getRouteName();
-    }
-
-    protected function _getControllerName() {
-        return $this->getRequest()->getControllerName();
-    }
-
-    protected function _getActionName() {
-        return $this->getRequest()->getActionName();
-    }
-
-    protected function _isProduct() {
-        return $this->_getRouteName()      == 'catalog'
-            && $this->_getControllerName() == 'product';
-    }
-
-    protected function _isCMSPage() {
-        return $this->_getRouteName() == 'cms';
-    }
-
-    protected function _isCategory() {
-        return $this->_getRouteName()       == 'catalog'
-            && $this->_getControllerName()  == 'category';
-    }
-
-    protected function _isSearch() {
-        return $this->_getRouteName() == 'catalogsearch';
-    }
-
     /**
      * @return array|bool
      */
-    protected function _getProductPageData()
+    private function _getProductPageData()
     {
         $product = $this->getCurrentProduct();
 
@@ -185,10 +188,12 @@ class Head extends \Magento\Framework\View\Element\Template
     /**
      * @param $product
      * @return array|bool
+     * @throws LocalizedException
+     * @throws NoSuchEntityException
      */
-    protected function _getProductInfo($product)
+    private function _getProductInfo($product)
     {
-        if ($product instanceof \Magento\Catalog\Model\Product) {
+        if ($product instanceof ProductModel) {
             $productInfo = array(
                 'id'        => $this->coreHelperProduct->getIdentifierForProduct($product),
                 'sku'       => $product->getSku(),
@@ -227,9 +232,9 @@ class Head extends \Magento\Framework\View\Element\Template
     }
 
     /**
-     * @return array|null
+     * @return array|bool
      */
-    protected function _getProductMappingData()
+    private function _getProductMappingData()
     {
         $product = $this->getCurrentProduct();
 
@@ -244,11 +249,12 @@ class Head extends \Magento\Framework\View\Element\Template
     }
 
     /**
-     * @todo correctly handle child product URLs
-     *
-     * @param \Magento\Catalog\Model\Product $product
+     * @param $product
+     * @return array
+     * @throws LocalizedException
+     * @throws NoSuchEntityException
      */
-    protected function _getConfigurableProductMap($product)
+    private function _getConfigurableProductMap($product)
     {
         $productMap = [];
         $childProducts = $product->getTypeInstance()->getUsedProducts($product);
@@ -265,36 +271,139 @@ class Head extends \Magento\Framework\View\Element\Template
         return $productMap;
     }
 
-    protected function _isBasket() {
+    /**
+     * @return bool
+     */
+    private function _isHomepage()
+    {
+        return $this->getUrl('') == $this->getUrl('*/*/*', array('_current' => true, '_use_rewrite' => true));
+    }
+
+    /**
+     * @return int
+     * @throws NoSuchEntityException
+     */
+    private function _getStore()
+    {
+        return $this->storeModelStoreManagerInterface->getStore()->getStoreId();
+    }
+
+    /**
+     * @return string
+     * @throws LocalizedException
+     * @throws NoSuchEntityException
+     */
+    private function _getCurrencyCode()
+    {
+        return $this->storeModelStoreManagerInterface->getStore()->getCurrentCurrency()->getCode();
+    }
+
+    /**
+     * @return string
+     */
+    private function _getRouteName()
+    {
+        return (string) $this->getRequest()->getRouteName();
+    }
+
+    /**
+     * @return string
+     */
+    private function _getControllerName()
+    {
+        return (string) $this->getRequest()->getControllerName();
+    }
+
+    /**
+     * @return string
+     */
+    private function _getActionName()
+    {
+        return (string) $this->getRequest()->getActionName();
+    }
+
+    /**
+     * @return bool
+     */
+    private function _isProduct()
+    {
+        return $this->_getRouteName()      == 'catalog'
+            && $this->_getControllerName() == 'product';
+    }
+
+    /**
+     * @return bool
+     */
+    private function _isCMSPage()
+    {
+        return $this->_getRouteName() == 'cms';
+    }
+
+    /**
+     * @return bool
+     */
+    private function _isCategory()
+    {
+        return $this->_getRouteName()       == 'catalog'
+            && $this->_getControllerName()  == 'category';
+    }
+
+    /**
+     * @return bool
+     */
+    private function _isSearch()
+    {
+        return $this->_getRouteName() == 'catalogsearch';
+    }
+
+    /**
+     * @return bool
+     */
+    private function _isBasket()
+    {
         return $this->_getRouteName()           == 'checkout'
                 && $this->_getControllerName()  == 'cart'
                 && $this->_getActionName()      == 'index';
     }
 
-    protected function _isCheckout() {
+    /**
+     * @return bool
+     */
+    private function _isCheckout()
+    {
         return strpos($this->_getRouteName(), 'checkout') !== false
                 && $this->_getActionName()  != 'success';
     }
 
-    protected function _getCheckoutStep() {
-        if(!$this->_isCheckout())
-        {
+    /**
+     * @return string|bool
+     */
+    private function _getCheckoutStep()
+    {
+        if (!$this->_isCheckout()) {
             return false;
         }
-        if($step = $this->frameworkAppRequestInterface->getParam('step'))
-        {
-            return $step;
+        if ($step = $this->frameworkAppRequestInterface->getParam('step')) {
+            return (string) $step;
         }
 
         return false;
     }
 
-    protected function _isOrderConfirmation() {
+    /**
+     * @return bool
+     */
+    private function _isOrderConfirmation()
+    {
         return strpos($this->_getRouteName(), 'checkout') !== false
                 && $this->_getActionName() == 'success';
     }
 
-    protected function _getOrderData() {
+    /**
+     * @return array|bool
+     */
+    private function _getOrderData()
+    {
         if (!$this->_isOrderConfirmation())
             return false;
 
@@ -303,47 +412,54 @@ class Head extends \Magento\Framework\View\Element\Template
             $order = $this->salesModelOrderFactory->create()->load($orderId);
 
             return array(
-                'id'              => $order->getIncrementId()
+                'id' => $order->getIncrementId()
             );
         }
 
         return false;
     }
 
-    protected function _getCheckoutSession() {
-        if ($this->_isBasket())
+    /**
+     * @return Cart|Session
+     */
+    private function _getCheckoutSession()
+    {
+        if ($this->_isBasket()) {
             return $this->checkoutModelCart;
+        }
 
         return $this->checkoutModelSession;
     }
 
-    protected function _getSearchQuery()
+    /**
+     * @return string|bool
+     */
+    private function _getSearchQuery()
     {
-        if(!$this->_isSearch())
+        if (!$this->_isSearch()) {
             return false;
+        }
 
-        $param_names = [
-            \Magento\Search\Model\QueryFactory::QUERY_VAR_NAME,
+        $paramNames = [
+            QueryFactory::QUERY_VAR_NAME,
             'q',
             'query_text'
         ];
 
-        foreach($param_names as $param)
-        {
+        foreach ($paramNames as $param) {
             $text = $this->getRequest()->getParam($param);
-            if($text)
-            {
-                return $text;
+            if ($text) {
+                return (string) $text;
             }
         }
+
         return false;
     }
 
     /**
-     * Try to get the currently active product
-     * @return bool|\Magento\Catalog\Model\Product|mixed
+     * @return ProductModel|bool
      */
-    protected function getCurrentProduct()
+    private function getCurrentProduct()
     {
         $product = $this->magentoFrameworkRegistry->registry("current_product");
 

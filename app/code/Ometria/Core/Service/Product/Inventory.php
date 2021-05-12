@@ -149,7 +149,7 @@ class Inventory
      */
     private function getLegacyStockStatus(ProductInterface $product)
     {
-        $stockItem = $this->getStockItem($product->getId());
+        $stockItem = $this->getStockItem((int) $product->getId());
 
         return (bool) $stockItem->getIsInStock();
     }
@@ -162,20 +162,20 @@ class Inventory
      */
     private function getLegacySalableQuantity(ProductInterface $product)
     {
-        $stockItem = $this->getStockItem($product->getId());
+        $stockItem = $this->getStockItem((int) $product->getId());
 
         return $stockItem->getManageStock() ? $stockItem->getQty() : 0.;
     }
 
     /**
-     * @param ProductInterface $product
+     * @param int $productId
      * @return StockItemInterface
      */
-    private function getStockItem(ProductInterface $product)
+    private function getStockItem(int $productId)
     {
         /** @var StockRegistryInterface $stockRegistry */
         $stockRegistry = ObjectManager::getInstance()->get(StockRegistryInterface::class);
 
-        return $stockRegistry->getStockItem($product->getId());
+        return $stockRegistry->getStockItem($productId);
     }
 }
