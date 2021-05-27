@@ -4,6 +4,7 @@ namespace Ometria\Api\Controller\V2;
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Api\ProductAttributeRepositoryInterface;
 use Magento\Catalog\Model\CategoryRepository;
+use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
 use Magento\Catalog\Model\Product\TypeFactory;
 use Magento\Catalog\Model\Product\Visibility;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
@@ -282,7 +283,7 @@ class Products extends Action
         $productData[OmetriaProductInterface::IS_VARIANT] = (bool) $parentId != null ? true : false;
         $productData[OmetriaProductInterface::PARENT_ID] = $parentId;
         $productData[OmetriaProductInterface::ATTRIBUTES] = $this->getAttributes($product);
-        $productData[OmetriaProductInterface::IS_ACTIVE] = (bool) $product->getStatus();
+        $productData[OmetriaProductInterface::IS_ACTIVE] = (bool) $product->getStatus() == ProductStatus::STATUS_ENABLED;
         $productData[OmetriaProductInterface::STORES] = $product->getStoreIds();
         $productData[OmetriaProductInterface::IS_IN_STOCK] = $this->inventoryService->getStockStatus($product);
         $productData[OmetriaProductInterface::QTY] = $this->inventoryService->getSalableQuantity($product);
