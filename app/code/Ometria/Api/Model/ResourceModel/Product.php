@@ -2,10 +2,9 @@
 namespace Ometria\Api\Model\ResourceModel;
 
 use Magento\Catalog\Api\Data\ProductInterface;
-use Magento\Framework\Model\ResourceModel\Db\AbstractDb;
-use Magento\Framework\Module\Manager as ModuleManager;
-use Magento\Framework\Model\ResourceModel\Db\Context;
 use Magento\Framework\EntityManager\MetadataPool;
+use Magento\Framework\Model\ResourceModel\Db\AbstractDb;
+use Magento\Framework\Model\ResourceModel\Db\Context;
 
 class Product extends AbstractDb
 {
