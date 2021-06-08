@@ -1,10 +1,31 @@
 <?php
 namespace Ometria\Api\Model\ResourceModel;
 
+use Magento\Catalog\Api\Data\ProductInterface;
+use Magento\Framework\EntityManager\MetadataPool;
 use Magento\Framework\Model\ResourceModel\Db\AbstractDb;
+use Magento\Framework\Model\ResourceModel\Db\Context;
 
 class Product extends AbstractDb
 {
+    /** @var MetadataPool */
+    private $metadataPool;
+
+    /**
+     * @param Context $context
+     * @param MetadataPool $metadataPool
+     * @param null $connectionName
+     */
+    public function __construct(
+        Context $context,
+        MetadataPool $metadataPool,
+        $connectionName = null
+    ) {
+        $this->metadataPool = $metadataPool;
+
+        parent::__construct($context, $connectionName);
+    }
+
     protected function _construct()
     {
     }
@@ -21,22 +42,26 @@ class Product extends AbstractDb
         $childToParentIds = [];
 
         $connection = $this->getConnection();
-
+        $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
         $select = $connection->select()
             ->from(
-                $this->getConnection()->getTableName('catalog_product_super_link'),
-                ['product_id', 'parent_id']
-            )
-            ->where(
-                'product_id IN (?)',
+                ['link_table' => $connection->getTableName('catalog_product_super_link')],
+                ['link_id', 'product_id']
+            )->join(
+                ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
+                'e.' . $metadata->getLinkField() . ' = link_table.parent_id',
+                ['e.entity_id']
+            )->where(
+                'link_table.product_id IN(?)',
                 $childIds
             )
-            // order by the oldest links first so the iterator will end with the most recent link
-            ->order('link_id ASC');
+            ->order(
+                'link_id ASC'
+            );
 
         $result = $connection->fetchAll($select);
         foreach ($result as $_row) {
-            $childToParentIds[$_row['product_id']] = $_row['parent_id'];
+            $childToParentIds[$_row['product_id']] = $_row['entity_id'];
         }
 
         return $childToParentIds;
@@ -54,22 +79,25 @@ class Product extends AbstractDb
         $childToParentIds = [];
 
         $connection = $this->getConnection();
-
+        $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
         $select = $connection->select()
             ->from(
-                $this->getConnection()->getTableName('catalog_product_bundle_selection'),
-                ['parent_product_id', 'product_id']
-            )
-            ->where(
-                'product_id IN (?)',
+                ['link_table' => $connection->getTableName('catalog_product_bundle_selection')],
+                ['selection_id', 'product_id']
+            )->join(
+                ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
+                'e.' . $metadata->getLinkField() . ' = link_table.parent_product_id',
+                ['e.entity_id']
+            )->where(
+                'link_table.product_id IN(?)',
                 $childIds
-            )
-            // order by the oldest selections first so the iterator will end with the most recent link
-            ->order('selection_id ASC');
+            )->order(
+                'selection_id ASC'
+            );
 
         $result = $connection->fetchAll($select);
         foreach ($result as $_row) {
-            $childToParentIds[$_row['product_id']] = $_row['parent_product_id'];
+            $childToParentIds[$_row['product_id']] = $_row['entity_id'];
         }
 
         return $childToParentIds;
@@ -87,26 +115,30 @@ class Product extends AbstractDb
         $childToParentIds = [];
 
         $connection = $this->getConnection();
-
+        $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
         $select = $connection->select()
             ->from(
-                $this->getConnection()->getTableName('catalog_product_link'),
-                ['product_id', 'linked_product_id']
-            )
-            ->where(
-                'linked_product_id IN (?)',
-                $childIds
-            )
-            ->where(
+                ['link_table' => $connection->getTableName('catalog_product_link')],
+                ['link_id', 'linked_product_id']
+            )->join(
+                ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
+                'e.' . $metadata->getLinkField() . ' = link_table.product_id',
+                ['e.entity_id']
+            )->where(
                 'link_type_id = ?',
                 \Magento\GroupedProduct\Model\ResourceModel\Product\Link::LINK_TYPE_GROUPED
             )
-            // order by the oldest links first so the iterator will end with the most recent link
-            ->order('link_id ASC');
+            ->where(
+                'link_table.linked_product_id IN(?)',
+                $childIds
+            )->order(
+                'link_id ASC'
+            );
 
         $result = $connection->fetchAll($select);
+
         foreach ($result as $_row) {
-            $childToParentIds[$_row['linked_product_id']] = $_row['product_id'];
+            $childToParentIds[$_row['linked_product_id']] = $_row['entity_id'];
         }
 
         return $childToParentIds;
