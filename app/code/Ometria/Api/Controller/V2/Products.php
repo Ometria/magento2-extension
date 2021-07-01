@@ -624,7 +624,7 @@ class Products extends Action
     private function getStoreDefaultCurrency($storeId)
     {
         if (!isset($this->storeCurrencies[$storeId])) {
-            $stores = $this->storeManager->getStores();
+            $stores = $this->storeManager->getStores(true);
 
             foreach ($stores as $store) {
                 $this->storeCurrencies[$store->getId()] = $store->getDefaultCurrency()->getCode();
