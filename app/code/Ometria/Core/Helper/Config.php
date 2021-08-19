@@ -3,6 +3,7 @@ namespace Ometria\Core\Helper;
 
 use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
+use Magento\Store\Model\ScopeInterface;
 use Ometria\Core\Helper\MageConfig;
 
 class Config extends AbstractHelper
@@ -54,6 +55,17 @@ class Config extends AbstractHelper
         } else {
             return $this->coreHelperMageConfig->get('ometria/general/apikey');
         }
+    }
+
+    /**
+     * @return string
+     */
+    public function getPushAPIKey()
+    {
+        return (string) $this->scopeConfig->getValue(
+            'ometria/general/pushapikey',
+            ScopeInterface::SCOPE_STORE
+        );
     }
 
     public function isConfigured()

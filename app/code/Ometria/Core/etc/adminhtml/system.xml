@@ -23,6 +23,10 @@
 					<label>Ometria API Private Key</label>
 					<comment>Log into your Ometria Account to find this key</comment>
 				</field>
+                <field id="pushapikey" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Ometria Push API Key</label>
+                    <comment>Log into your Ometria Account to find this key</comment>
+                </field>
 			</group>
 			<group id="advanced" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
 				<label>Advanced</label>

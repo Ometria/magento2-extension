@@ -80,6 +80,23 @@ class Inventory
     }
 
     /**
+     * @param int $id
+     * @param bool $isInStock
+     * @return array
+     */
+    public function getPushApiStockData(int $id, bool $isInStock)
+    {
+        return [
+            [
+                "@type" => "product",
+                "id" => $id,
+                "is_in_stock" => $isInStock,
+                "@merge" => true
+            ]
+        ];
+    }
+
+    /**
      * @param ProductCollection $collection
      */
     public function addLegacyStockFilterToCollection(ProductCollection $collection)
