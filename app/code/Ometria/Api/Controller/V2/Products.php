@@ -85,6 +85,9 @@ class Products extends Action
     /** @var AppEmulation */
     private $appEmulation;
 
+    /** @var InventoryService */
+    private $inventoryService;
+
     /** @var array */
     private $productCollections = [];
 
