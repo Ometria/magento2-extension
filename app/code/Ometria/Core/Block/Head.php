@@ -103,10 +103,20 @@ class Head extends Template
      */
     public function isUnivarEnabled()
     {
-        return $this->scopeConfig->isSetFlag(
+        $enabled = $this->scopeConfig->isSetFlag(
             'ometria/advanced/univar',
             ScopeInterface::SCOPE_STORE
         );
+
+        // Check config for tracking if on checkout page
+        if ($enabled && $this->_isCheckout()) {
+            $enabled = $this->scopeConfig->isSetFlag(
+                'ometria/advanced/checkout_tracking_enabled',
+                ScopeInterface::SCOPE_STORE
+            );
+        }
+
+        return $enabled;
     }
 
     /**

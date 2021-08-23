@@ -35,6 +35,11 @@
 					<label>Include Data Layer</label>
 					<source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
 				</field>
+                <field id="checkout_tracking_enabled" translate="label" type="select" sortOrder="12" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Include Data Layer on Checkout</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Allow tracking javascript to load from the Ometria CDN on the Magento checkout page.</comment>
+                </field>
                 <field id="pageview_on_variant" translate="label comment" type="select" sortOrder="15" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Trigger Ometria Page View on variant selection</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
