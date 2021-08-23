@@ -7,9 +7,13 @@ use Magento\CatalogInventory\Api\Data\StockItemInterface;
 use Magento\CatalogInventory\Api\StockRegistryInterface;
 use Magento\CatalogInventory\Helper\Stock as StockHelper;
 use Magento\Framework\App\ObjectManager;
+use Magento\Framework\Exception\InputException;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Module\Manager as ModuleManager;
+use Magento\InventoryConfigurationApi\Api\GetStockItemConfigurationInterface;
+use Magento\InventoryConfigurationApi\Exception\SkuIsNotAssignedToStockException;
+use Magento\InventorySalesAdminUi\Model\ResourceModel\GetAssignedStockIdsBySku;
 use Magento\InventorySalesApi\Api\Data\SalesChannelInterface;
 use Magento\InventorySalesApi\Api\GetProductSalableQtyInterface;
 use Magento\InventorySalesApi\Api\IsProductSalableInterface;
@@ -67,6 +71,8 @@ class Inventory
     }
 
     /**
+     * Get the salable quantity of a product for current sales channel
+     *
      * @param ProductInterface $product
      * @return float
      */
@@ -74,6 +80,24 @@ class Inventory
     {
         if ($this->isMSIAvailable()) {
             return $this->getMSISalableQuantity($product);
+        }
+
+        return $this->getLegacySalableQuantity($product);
+    }
+
+    /**
+     * Get global salable quantity of a product (all sales channels)
+     *
+     * @param ProductInterface $product
+     * @return float|null
+     * @throws InputException
+     * @throws LocalizedException
+     * @throws SkuIsNotAssignedToStockException
+     */
+    public function getGlobalSalableQuantity(ProductInterface $product)
+    {
+        if ($this->isMSIAvailable()) {
+            return $this->getMSIGlobalSalableQuantity($product);
         }
 
         return $this->getLegacySalableQuantity($product);
@@ -134,6 +158,41 @@ class Inventory
             $qty = $getProductSalableQty->execute($product->getSku(), $this->getMSIStockId());
         } catch (\Exception $e) {
             $qty = 0.;
+        }
+
+        return $qty;
+    }
+
+    /**
+     * @param ProductInterface $product
+     * @return float|null
+     * @throws InputException
+     * @throws LocalizedException
+     * @throws SkuIsNotAssignedToStockException
+     */
+    private function getMSIGlobalSalableQuantity(ProductInterface $product)
+    {
+        /** @var GetAssignedStockIdsBySku $getSalableQtyData */
+        $getAssignedStockIdsBySku = ObjectManager::getInstance()->get(GetAssignedStockIdsBySku::class);
+
+        /** @var GetStockItemConfigurationInterface $getStockItemConfiguration */
+        $getStockItemConfiguration = ObjectManager::getInstance()->get(GetStockItemConfigurationInterface::class);
+
+        /** @var GetProductSalableQtyInterface $getProductSalableQtyInterface */
+        $getProductSalableQty = ObjectManager::getInstance()->get(GetProductSalableQtyInterface::class);
+
+        $qty = 0.;
+        $stockIds = $getAssignedStockIdsBySku->execute($product->getSku());
+
+        foreach ($stockIds as $stockId) {
+            $stockItemConfiguration = $getStockItemConfiguration->execute($product->getSku(), $stockId);
+            $isManageStock = $stockItemConfiguration->isManageStock();
+
+            if (!$isManageStock) {
+                return null;
+            }
+
+            $qty += $getProductSalableQty->execute($product->getSku(), $stockId);
         }
 
         return $qty;

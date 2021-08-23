@@ -78,8 +78,9 @@ class Config extends AbstractHelper
         $this->logger->log($level, $message);
     }
 
-    public function isSkuMode(){
-        return $this->coreHelperMageConfig->get('ometria/advanced/productmode')=='sku';
+    public function isSkuMode()
+    {
+        return $this->coreHelperMageConfig->get('ometria/advanced/productmode') == 'sku';
     }
 
     /**
@@ -96,5 +97,13 @@ class Config extends AbstractHelper
     public function getPreferredProductAttribute()
     {
         return (string) $this->coreHelperMageConfig->get('ometria/advanced/preferred_product_attribute');
+    }
+
+    /**
+     * @return string
+     */
+    public function getStockPushScope()
+    {
+        return (string) $this->coreHelperMageConfig->get('ometria/advanced/stock_push_scope');
     }
 }

@@ -70,6 +70,10 @@
                     <label>Override PHP 'max_execution_time' value in API</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
+                <field id="stock_push_scope" translate="label" type="select" sortOrder="60" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Out of stock product push scope</label>
+                    <source_model>Ometria\Core\Model\Config\Source\StockPushScope</source_model>
+                </field>
 			</group>
 		</section>
 	</system>
