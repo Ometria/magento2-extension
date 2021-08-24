@@ -192,7 +192,15 @@ class Inventory
                 return null;
             }
 
-            $qty += $getProductSalableQty->execute($product->getSku(), $stockId);
+            try {
+                // Try to get qty for current stock ID
+                $qtyForStockId = $getProductSalableQty->execute($product->getSku(), $stockId);
+            } catch (InputException $e) {
+                // Catch exception for invalid product types
+                $qtyForStockId = 0;
+            }
+
+            $qty += $qtyForStockId;
         }
 
         return $qty;
