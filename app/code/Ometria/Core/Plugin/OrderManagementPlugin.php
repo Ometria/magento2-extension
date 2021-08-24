@@ -74,8 +74,8 @@ class OrderManagementPlugin
                 $stockPushScope
             );
 
-            // if salable qty is set, check if push is required (null infers manage stock is disabled)
-            if ($salableQty != null) {
+            // if salable qty is set and not already 0, check if push is required (null infers manage stock is disabled)
+            if ($salableQty !== null && $salableQty > 0) {
                 // Calculate new salabale quantity (after order placement)
                 $salableQtyAfterOrder = $salableQty - $orderItem->getQtyOrdered();
                 if ($salableQtyAfterOrder <= 0) {
