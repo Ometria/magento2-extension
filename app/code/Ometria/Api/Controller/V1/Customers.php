@@ -10,6 +10,7 @@ use Magento\Framework\App\Action\Context;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Newsletter\Model\ResourceModel\Subscriber\Collection as SubscriberCollection;
+use Magento\Newsletter\Model\Subscriber;
 use Ometria\Api\Helper\CustomerData;
 use Ometria\Api\Helper\Format\V1\Customers as Helper;
 use Ometria\Api\Helper\Service\Filterable\Service as FilterableService;
@@ -40,9 +41,6 @@ class Customers extends Base
 
     /** @var RewardPointsService */
     private $rewardPointsService;
-
-    /** @var array */
-    private $customerIdsOfNewsLetterSubscribers = [];
 
     /** @var null|array */
     private $customerGroupNames;
@@ -120,9 +118,9 @@ class Customers extends Base
      */
     public function getItemsData($items)
     {
-        $subscriberCollection = $this->getSubscriberCollection($items);
+        $subscribers = $this->getSubscribers($items);
 
-        $items = array_map(function ($item) use ($subscriberCollection) {
+        $items = array_map(function ($item) use ($subscribers) {
 
             $new = Helper::getBlankArray();
 
@@ -135,9 +133,17 @@ class Customers extends Base
             $new["lastname"] = array_key_exists('lastname', $item) ? $item['lastname'] : '';
             $new["gender"] = $this->customerDataHelper->getGenderLabel($item);
             $new["date_of_birth"] = array_key_exists('dob', $item) ? $item['dob'] : '';
-            $new["marketing_optin"] = $this->getMarketingOption($item, $subscriberCollection);
             $new["country_id"] = $this->customerDataHelper->getCountryId($item);
             $new["store_id"] = array_key_exists('store_id', $item) ? $item['store_id'] : null;
+            $new["subscription"] = false;
+
+            $subscriber = isset($subscribers[$new["id"]]) ? $subscribers[$new["id"]] : false;
+            if ($subscriber) {
+                $new["subscription"] = [
+                    "change_status_at" => $subscriber->getChangeStatusAt(),
+                    "subscriber_status" => $subscriber->getStatus() == Subscriber::STATUS_SUBSCRIBED
+                ];
+            }
 
             if ($this->_request->getParam('raw') != null) {
                 $new['_raw'] = $item;
@@ -157,32 +163,21 @@ class Customers extends Base
         return $items;
     }
 
-    public function getMarketingOption($item, $subscriber_collection)
-    {
-        if (!array_key_exists('id', $item)) {
-            return false;
-        }
-
-        if (!$this->customerIdsOfNewsLetterSubscribers) {
-            foreach ($subscriber_collection as $subscriber) {
-                $this->customerIdsOfNewsLetterSubscribers[] = $subscriber->getCustomerId();
-            }
-        }
-
-        return in_array($item['id'], $this->customerIdsOfNewsLetterSubscribers);
-    }
-
     /**
      * @param $items
      * @return SubscriberCollection
      */
-    public function getSubscriberCollection($items)
+    public function getSubscribers($items)
     {
-        $customerIds = $this->getCustomerIds($items);
+        $subscribers = [];
+        $subscriberCollection = $this->subscriberCollection
+            ->addFieldToFilter('customer_id', ['in' => $this->getCustomerIds($items)]);
 
-        return $this->subscriberCollection
-            ->addFieldToFilter('customer_id', ['in' => $customerIds])
-            ->addFieldToFilter('subscriber_status', \Magento\Newsletter\Model\Subscriber::STATUS_SUBSCRIBED);
+        foreach ($subscriberCollection as $subscriber) {
+            $subscribers[$subscriber->getCustomerId()] = $subscriber;
+        }
+
+        return $subscribers;
     }
 
     /**
@@ -216,7 +211,7 @@ class Customers extends Base
      */
     private function getCustomerIds($items)
     {
-        $customerIds = array_map(function($item){
+        $customerIds = array_map(function($item) {
             return $item['id'];
         }, $items);
 
