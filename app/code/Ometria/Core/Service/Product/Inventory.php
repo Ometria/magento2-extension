@@ -189,6 +189,7 @@ class Inventory
             $isManageStock = $stockItemConfiguration->isManageStock();
 
             if (!$isManageStock) {
+                // Explicitly return null here to show 'manage stock' disabled rather than zero stock
                 return null;
             }
 
