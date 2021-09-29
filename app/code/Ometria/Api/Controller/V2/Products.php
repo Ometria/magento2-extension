@@ -286,7 +286,7 @@ class Products extends Action
         $productData[OmetriaProductInterface::IS_VARIANT] = (bool) $parentId != null ? true : false;
         $productData[OmetriaProductInterface::PARENT_ID] = $parentId;
         $productData[OmetriaProductInterface::ATTRIBUTES] = $this->getAttributes($product);
-        $productData[OmetriaProductInterface::IS_ACTIVE] = (bool) $product->getStatus() == ProductStatus::STATUS_ENABLED;
+        $productData[OmetriaProductInterface::IS_ACTIVE] = (bool) ($product->getStatus() == ProductStatus::STATUS_ENABLED);
         $productData[OmetriaProductInterface::STORES] = $product->getStoreIds();
         $productData[OmetriaProductInterface::IS_IN_STOCK] = $this->inventoryService->getStockStatus($product);
         $productData[OmetriaProductInterface::QTY] = $this->inventoryService->getSalableQuantity($product);
