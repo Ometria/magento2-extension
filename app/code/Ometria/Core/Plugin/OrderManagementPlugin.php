@@ -79,12 +79,12 @@ class OrderManagementPlugin
                 // Calculate new salabale quantity (after order placement)
                 $salableQtyAfterOrder = $salableQty - $orderItem->getQtyOrdered();
                 if ($salableQtyAfterOrder <= 0) {
-                    $this->pushApiService->pushRequest(
-                        $this->inventoryService->getPushApiStockData(
-                            (int)$orderItem->getProductId(),
-                            false
-                        )
+                    $stockData = $this->inventoryService->getPushApiStockData(
+                        (int)$orderItem->getProductId(),
+                        false
                     );
+
+                    $this->pushApiService->pushRequest($stockData);
                 }
             }
         }
