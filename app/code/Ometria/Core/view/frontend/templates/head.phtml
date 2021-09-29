@@ -1,25 +1,9 @@
 <?php /** @var $this Ometria\Core\Block\Head */ ?>
 
-<?php if ($this->isUnivarEnabled()): ?>
+<?php if ($this->isDatalayerEnabled()): ?>
     <script>
         window.ometria = window.ometria || {};
         window.ometria.raw_data = <?= json_encode($this->getDataLayer()) ?>;
-    </script>
-
-    <script>
-        require([
-            'jquery'
-        ], function ($) {
-            $(function () {
-                var url = window.location.protocol+"//cdn.ometria.com/tags/<?= $this->escapeHtmlAttr($this->getAPIKey()) ?>.js";
-                setTimeout(function(){
-                    var sc = document.createElement('script');
-                    sc.src = url;
-                    sc.setAttribute('async', 'true');
-                    document.getElementsByTagName("head")[0].appendChild(sc);
-                }, 50);
-            });
-        });
     </script>
 
     <?php if ($this->pageViewOnVariantEnabled()): ?>
@@ -40,4 +24,22 @@
         });
     </script>
     <?php endif; ?>
+<?php endif; ?>
+
+<?php if ($this->isTrackingEnabled()): ?>
+    <script>
+        require([
+            'jquery'
+        ], function ($) {
+            $(function () {
+                var url = window.location.protocol+"//cdn.ometria.com/tags/<?= $this->escapeHtmlAttr($this->getAPIKey()) ?>.js";
+                setTimeout(function(){
+                    var sc = document.createElement('script');
+                    sc.src = url;
+                    sc.setAttribute('async', 'true');
+                    document.getElementsByTagName("head")[0].appendChild(sc);
+                }, 50);
+            });
+        });
+    </script>
 <?php endif; ?>
