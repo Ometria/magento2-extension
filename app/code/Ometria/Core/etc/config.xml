@@ -9,6 +9,7 @@
 			</general>
 			<advanced>
 				<univar>1</univar>
+                <checkout_tracking_enabled>1</checkout_tracking_enabled>
                 <pageview_on_variant>1</pageview_on_variant>
 				<ping>1</ping>
 				<debug>0</debug>
@@ -17,6 +18,7 @@
 				<unique_id></unique_id>
                 <override_memory>0</override_memory>
                 <override_execution>0</override_execution>
+                <stock_push_scope>1</stock_push_scope>
 			</advanced>
 		</ometria>
 	</default>

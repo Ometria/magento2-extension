@@ -3,6 +3,7 @@ namespace Ometria\Core\Helper;
 
 use Magento\Framework\App\Helper\AbstractHelper;
 use Magento\Framework\App\Helper\Context;
+use Magento\Store\Model\ScopeInterface;
 use Ometria\Core\Helper\MageConfig;
 
 class Config extends AbstractHelper
@@ -56,6 +57,17 @@ class Config extends AbstractHelper
         }
     }
 
+    /**
+     * @return string
+     */
+    public function getPushAPIKey()
+    {
+        return (string) $this->scopeConfig->getValue(
+            'ometria/general/pushapikey',
+            ScopeInterface::SCOPE_STORE
+        );
+    }
+
     public function isConfigured()
     {
         return $this->isEnabled() && $this->getAPIKey() != "";
@@ -66,8 +78,9 @@ class Config extends AbstractHelper
         $this->logger->log($level, $message);
     }
 
-    public function isSkuMode(){
-        return $this->coreHelperMageConfig->get('ometria/advanced/productmode')=='sku';
+    public function isSkuMode()
+    {
+        return $this->coreHelperMageConfig->get('ometria/advanced/productmode') == 'sku';
     }
 
     /**
@@ -84,5 +97,13 @@ class Config extends AbstractHelper
     public function getPreferredProductAttribute()
     {
         return (string) $this->coreHelperMageConfig->get('ometria/advanced/preferred_product_attribute');
+    }
+
+    /**
+     * @return string
+     */
+    public function getStockPushScope()
+    {
+        return (string) $this->coreHelperMageConfig->get('ometria/advanced/stock_push_scope');
     }
 }

@@ -1,43 +1,45 @@
 <?php /** @var $this Ometria\Core\Block\Head */ ?>
 
-<?php if ($this->isUnivarEnabled()): ?>
-<script>
-    window.ometria = window.ometria || {};
-    window.ometria.raw_data = <?= json_encode($this->getDataLayer()) ?>;
-</script>
+<?php if ($this->isDatalayerEnabled()): ?>
+    <script>
+        window.ometria = window.ometria || {};
+        window.ometria.raw_data = <?= json_encode($this->getDataLayer()) ?>;
+    </script>
+
+    <?php if ($this->pageViewOnVariantEnabled()): ?>
+    <script>
+        require([
+            'jquery'
+        ], function ($) {
+            $(document).on('updateOmetriaProductVariant', function (event, selectedProductId) {
+                // Check Ometria API is avaialable and product mapping is available
+                if (typeof window.ometria.init === 'function') {
+                    if (window.ometria.raw_data.product_map[selectedProductId]) {
+                        // Update data layer and call Ometria init function
+                        window.ometria.raw_data.data = window.ometria.raw_data.product_map[selectedProductId];
+                        window.ometria.init();
+                    }
+                }
+            });
+        });
+    </script>
+    <?php endif; ?>
 <?php endif; ?>
 
-<script>
-    require([
-        'jquery'
-    ], function ($) {
-        $(function () {
-            var url = window.location.protocol+"//cdn.ometria.com/tags/<?= $this->escapeHtmlAttr($this->getAPIKey()) ?>.js";
-            setTimeout(function(){
-                var sc = document.createElement('script');
-                sc.src = url;
-                sc.setAttribute('async', 'true');
-                document.getElementsByTagName("head")[0].appendChild(sc);
-            }, 50);
+<?php if ($this->isTrackingEnabled()): ?>
+    <script>
+        require([
+            'jquery'
+        ], function ($) {
+            $(function () {
+                var url = window.location.protocol+"//cdn.ometria.com/tags/<?= $this->escapeHtmlAttr($this->getAPIKey()) ?>.js";
+                setTimeout(function(){
+                    var sc = document.createElement('script');
+                    sc.src = url;
+                    sc.setAttribute('async', 'true');
+                    document.getElementsByTagName("head")[0].appendChild(sc);
+                }, 50);
+            });
         });
-    });
-</script>
-
-<?php if ($this->pageViewOnVariantEnabled()): ?>
-<script>
-    require([
-        'jquery'
-    ], function ($) {
-        $(document).on('updateOmetriaProductVariant', function (event, selectedProductId) {
-            // Check Ometria API is avaialable and product mapping is available
-            if (typeof window.ometria.init === 'function') {
-                if (window.ometria.raw_data.product_map[selectedProductId]) {
-                    // Update data layer and call Ometria init function
-                    window.ometria.raw_data.data = window.ometria.raw_data.product_map[selectedProductId];
-                    window.ometria.init();
-                }
-            }
-        });
-    });
-</script>
+    </script>
 <?php endif; ?>
