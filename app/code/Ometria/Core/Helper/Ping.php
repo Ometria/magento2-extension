@@ -101,7 +101,7 @@ class Ping extends AbstractHelper
 
                 fclose($fp);
             } else {
-                $ometriaConfigHelper->log("Ping failed: Error $errorNum - $errorStr", Zend_Log::ERR);
+                $ometriaConfigHelper->log("Ping failed: Error $errorNum - $errorStr", \Zend_Log::ERR);
                 return false;
             }
         } catch (\Exception $e) {
