@@ -133,7 +133,7 @@ class OrderIds extends Base
                 )
             ],
             OrderInterface::STORE_ID => [
-                self::EQUAL_CONDITION => $this->getStoreFilterId()
+                self::EQUAL_CONDITION => $this->getRequestParam(self::STORE_ID)
             ]
         ];
     }
@@ -145,20 +145,6 @@ class OrderIds extends Base
     private function getRequestParam($key)
     {
         return $this->getRequest()->getParam($key, null);
-    }
-
-    /**
-     * @return int
-     */
-    private function getStoreFilterId()
-    {
-        if ($this->getRequestParam(self::STORE_ID) !== null) {
-            $storeId = (int) $this->getRequestParam(self::STORE_ID);
-        } else {
-            $storeId = $this->storeManager->getStore()->getId();
-        }
-
-        return $storeId;
     }
 
     /**
