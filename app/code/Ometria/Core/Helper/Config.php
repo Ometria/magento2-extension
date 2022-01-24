@@ -106,4 +106,20 @@ class Config extends AbstractHelper
     {
         return (string) $this->coreHelperMageConfig->get('ometria/advanced/stock_push_scope');
     }
+
+    /**
+     * @return bool
+     */
+    public function isCookiebotEnabled()
+    {
+        return (bool) $this->coreHelperMageConfig->get('ometria/advanced/enable_cookiebot');
+    }
+
+    /**
+     * @return string
+     */
+    public function getCookiebotClass()
+    {
+        return (string) $this->coreHelperMageConfig->get('ometria/advanced/cookiebot_classification');
+    }
 }

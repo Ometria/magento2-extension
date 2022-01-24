@@ -1,73 +1,100 @@
 <?php
-namespace Ometria\Core\Helper; 
-use Magento\Framework\App\Helper\AbstractHelper; 
-use Magento\Framework\App\Helper\Context; 
-class Cookiechannel extends AbstractHelper 
+namespace Ometria\Core\Helper;
+
+use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Framework\App\Helper\Context;
+use Ometria\Core\Helper\Is\Frontend as IsFrontend;
+
+class Cookiechannel extends AbstractHelper
 {
-
-    const COOKIE_NAME = 'ommage';
+    const COOKIE_NAME                = 'ommage';
+    const COOKIEBOT_COOKIE_NAME      = 'CookieConsent';
     const SEPERATOR_BETWEEN_COMMANDS = ';';
-    const SEPERATOR_IN_COMMANDS = ':';
+    const SEPERATOR_IN_COMMANDS      = ':';
 
-    protected $helperConfig;
-    
-    protected $frontendAreaChecker;       
-    
-    protected $cookie_did_change = false;        
-    
+    /** @var Config */
+    private $helperConfig;
+
+    /** @var IsFrontend */
+    private $frontendAreaChecker;
+
+    /** @var bool */
+    private $cookieDidChange = false;
+
+    /**
+     * @param Context $context
+     * @param Config $helperConfig
+     * @param IsFrontend $frontendAreaChecker
+     */
     public function __construct(
         Context $context,
-        \Ometria\Core\Helper\Config $helperConfig,
-        \Ometria\Core\Helper\Is\Frontend $frontendAreaChecker             
-    )        
-    {
-        $this->helperConfig         = $helperConfig;    
-        $this->frontendAreaChecker  = $frontendAreaChecker;        
+        Config $helperConfig,
+        IsFrontend $frontendAreaChecker
+    ) {
+        $this->helperConfig         = $helperConfig;
+        $this->frontendAreaChecker  = $frontendAreaChecker;
+
         return parent::__construct($context);
     }
-        
-    public function addCommand($command, $replace_if_exists=false, $set_cookie=true){
-        if (!$command || !is_array($command)) return;
 
-
-        // Return if admin area or API call
-        // if (Mage::app()->getStore()->isAdmin()) return;
-        // if (Mage::getSingleton('api/server')->getAdapter() != null) return;
-        if(!$this->frontendAreaChecker->check())
-        {
+    /**
+     * @param $command
+     * @param bool $replaceIfExists
+     */
+    public function addCommand($command, bool $replaceIfExists = false)
+    {
+        if (!$command || !is_array($command)) {
             return;
         }
 
-        //$ometria_config_helper = Mage::helper('ometria/config');
-        $ometria_config_helper = $this->helperConfig;
-        if (!$ometria_config_helper->isConfigured()) return;
-        if (!$ometria_config_helper->isUnivarEnabled()) return;
+        // Return if admin area or API call
+        if(!$this->frontendAreaChecker->check()) {
+            return;
+        }
 
-        if ($command[0]=='identify') $command[1] = '';
-        
+        if (!$this->helperConfig->isConfigured()) {
+            return;
+        }
+
+        if (!$this->helperConfig->isUnivarEnabled()) {
+            return;
+        }
+
+        if ($command[0] == 'identify') {
+            $command[1] = '';
+        }
+
         $str = implode(self::SEPERATOR_IN_COMMANDS, $command);
 
-        $this->appendCookieCommand($command[0], $str, $replace_if_exists);
+        $this->appendCookieCommand($command[0], $str, $replaceIfExists);
     }
 
-    private function appendCookieCommand($command_name, $str, $replace_if_exists=false, $set_cookie=true){
-        $existing_cookie = isset($_COOKIE[self::COOKIE_NAME]) ? $_COOKIE[self::COOKIE_NAME] : '';
-        $commands = explode(self::SEPERATOR_BETWEEN_COMMANDS, $existing_cookie);        
-        $new_cookie = '';
+    /**
+     * @param $commandName
+     * @param $str
+     * @param bool $replaceIfExists
+     */
+    private function appendCookieCommand($commandName, $str, bool $replaceIfExists = false)
+    {
+        $existingCookie = isset($_COOKIE[self::COOKIE_NAME]) ? $_COOKIE[self::COOKIE_NAME] : '';
+        $commands = explode(self::SEPERATOR_BETWEEN_COMMANDS, $existingCookie);
+        $newCookie = '';
 
-        if ($replace_if_exists && $commands) {
-            $commands_filtered = array();
+        if ($replaceIfExists && $commands) {
+            $commandsFiltered = array();
             foreach($commands as $command){
-                if (strpos($command, $command_name.self::SEPERATOR_IN_COMMANDS)!==0) {
-                    $commands_filtered[] = $command;
+                if (strpos($command, $commandName . self::SEPERATOR_IN_COMMANDS) !== 0) {
+                    $commandsFiltered[] = $command;
                 }
             }
-            $commands = $commands_filtered;
+            $commands = $commandsFiltered;
             $commands = array_filter($commands);
         }
 
         $commands[] = $str;
-        if (count($commands)>6) $commands = array_slice($commands, 0, 6);
+        if (count($commands) > 6) {
+            $commands = array_slice($commands, 0, 6);
+        }
 
         $commands = array_unique($commands);
         $commands = array_filter($commands);
@@ -75,23 +102,84 @@ class Cookiechannel extends AbstractHelper
         sort($commands);
         $commands = array_values($commands);
 
-        $new_cookie = implode(self::SEPERATOR_BETWEEN_COMMANDS, $commands);
-        if (strlen($new_cookie)>1000) $new_cookie = '';
+        $newCookie = implode(self::SEPERATOR_BETWEEN_COMMANDS, $commands);
+        if (strlen($newCookie) > 1000) {
+            $newCookie = '';
+        }
 
-        if (!headers_sent() && ($new_cookie!=$existing_cookie)) {
-            $this->cookie_did_change = true;
-            $_COOKIE[self::COOKIE_NAME] = $new_cookie;
-            //setcookie(self::COOKIE_NAME, $new_cookie, 0, '/');
-            //if ($set_cookie) Mage::getModel('core/cookie')
-            //                    ->set(self::COOKIE_NAME, $new_cookie, 0, '/');
-            if ($set_cookie) $this->sendCookie();
+        if (!headers_sent() && ($newCookie != $existingCookie)) {
+            $this->cookieDidChange = true;
+            $_COOKIE[self::COOKIE_NAME] = $newCookie;
+
+            $this->sendCookie();
         }
     }
-    
-    public function sendCookie(){
-        if (!$this->cookie_did_change) return;
+
+    public function sendCookie()
+    {
+        if (!$this->cookieDidChange) {
+            return;
+        }
+
+        if ($this->helperConfig->isCookiebotEnabled() && $this->cookiebotCookieAllowed() === false) {
+            return;
+        }
+
         $cookie = isset($_COOKIE[self::COOKIE_NAME]) ? $_COOKIE[self::COOKIE_NAME] : '';
         setcookie(self::COOKIE_NAME, $cookie, 0, '/');
-        $this->cookie_did_change = false;
-    }    
+        $this->cookieDidChange = false;
+    }
+
+    /**
+     * @return bool
+     */
+    private function cookiebotCookieAllowed()
+    {
+        $cookieAllowed = false;
+
+        if (isset($_COOKIE[self::COOKIEBOT_COOKIE_NAME])) {
+            switch ($_COOKIE[self::COOKIEBOT_COOKIE_NAME]) {
+                case "-1":
+                    //The user is not within a region that requires consent - all cookies are accepted
+                    $cookieAllowed = true;
+                    break;
+
+                default:
+                    // The user must give their consent
+                    $cookieConsent = $this->getCookiebotConsent();
+                    if ($cookieConsent) {
+                        $cookieClass = $this->helperConfig->getCookiebotClass();
+                        // Consent cookie was found
+                        if (isset($cookieConsent[$cookieClass]) && filter_var($cookieConsent[$cookieClass], FILTER_VALIDATE_BOOLEAN)) {
+                            //Current user accepts Ometria cookies
+                            $cookieAllowed = true;
+                        }
+                    }
+                    break;
+            }
+        }
+
+        return $cookieAllowed;
+    }
+
+    /**
+     * Read current user consent in encoded JavaScript format from Cookiebot cookie
+     *
+     * @see https://www.cookiebot.com/en/developer/
+     * @return mixed
+     */
+    private function getCookiebotConsent()
+    {
+        $json = preg_replace('/\s*:\s*([a-zA-Z0-9_]+?)([}\[,])/',
+            ':"$1"$2',
+            preg_replace('/([{\[,])\s*([a-zA-Z0-9_]+?):/',
+                '$1"$2":',
+                str_replace("'",
+                    '"',
+                    stripslashes($_COOKIE[self::COOKIEBOT_COOKIE_NAME])
+                )
+            )
+        );
+        return json_decode($json, true);
+    }
 }

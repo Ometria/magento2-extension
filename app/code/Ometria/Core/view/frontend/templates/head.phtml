@@ -37,6 +37,13 @@
                     var sc = document.createElement('script');
                     sc.src = url;
                     sc.setAttribute('async', 'true');
+                    <?php if ($this->isCookiebotEnabled()): ?>
+                        sc.setAttribute('type', 'text/plain');
+                        sc.setAttribute(
+                            'data-cookieconsent',
+                            '<?= $this->escapeJs($this->getCookiebotClass()) ?>'
+                        );
+                    <?php endif; ?>
                     document.getElementsByTagName("head")[0].appendChild(sc);
                 }, 50);
             });
