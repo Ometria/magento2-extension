@@ -60,7 +60,7 @@ class Cookiechannel extends AbstractHelper
             return;
         }
 
-        if ($command[0] == 'identify') {
+        if ($command[0] === 'identify') {
             $command[1] = '';
         }
 
