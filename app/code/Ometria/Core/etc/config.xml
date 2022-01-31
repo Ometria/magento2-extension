@@ -19,6 +19,8 @@
                 <override_memory>0</override_memory>
                 <override_execution>0</override_execution>
                 <stock_push_scope>1</stock_push_scope>
+                <enable_cookiebot>0</enable_cookiebot>
+                <cookiebot_classification>marketing</cookiebot_classification>
 			</advanced>
 		</ometria>
 	</default>

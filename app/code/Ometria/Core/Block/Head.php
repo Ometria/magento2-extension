@@ -112,6 +112,22 @@ class Head extends Template
     /**
      * @return bool
      */
+    public function isCookiebotEnabled()
+    {
+        return (bool) $this->scopeConfig->isSetFlag('ometria/advanced/enable_cookiebot');
+    }
+
+    /**
+     * @return string
+     */
+    public function getCookiebotClass()
+    {
+        return (string) $this->scopeConfig->getValue('ometria/advanced/cookiebot_classification');
+    }
+
+    /**
+     * @return bool
+     */
     public function isTrackingEnabled()
     {
         $enabled = true;
