@@ -262,16 +262,14 @@ class Products extends Base
                 ->addFieldToFilter('attribute_code', $attribute['attribute_code'])
                 ->getFirstItem();
 
-            $key = 'value';
-
-            if (in_array($full_attribute->getFrontendInput(), ['select', 'multiselect'])) {
-                $key = 'id';
-            }
+            $inputType = $fullAttribute->getFrontendInput();
+            $type = $inputType == 'multiselect' ? '&' . $attribute['attribute_code'] : $attribute['attribute_code'];
+            $valueIdx = in_array($inputType, ['select', 'multiselect']) ? 'id' : 'value';
 
             $tmp['attributes'][] = [
-                'type'  => $attribute['attribute_code'],
-                $key    => $attribute['value'],
-                'label' => $full_attribute->getFrontendLabel()
+                'type'    => $type,
+                $valueIdx => $attribute['value'],
+                'label'   => $fullAttribute->getFrontendLabel()
             ];
         }
 

@@ -389,12 +389,14 @@ class Products extends Action
                 continue;
             }
 
-            $valueIdx = in_array($attributeData['input'], ['select', 'multiselect']) ? 'id' : 'value';
+            $inputType = $attributeData['input'];
+            $type = $inputType == 'multiselect' ? '&' . $attribute->getAttributeCode() : $attribute->getAttributeCode();
+            $valueIdx = in_array($inputType, ['select', 'multiselect']) ? 'id' : 'value';
 
             $attributes[] = [
-                'type' => $attribute->getAttributeCode(),
+                'type'    => $type,
                 $valueIdx => $attribute->getValue(),
-                'label' => $attributeData['label']
+                'label'   => $attributeData['label']
             ];
         }
 
