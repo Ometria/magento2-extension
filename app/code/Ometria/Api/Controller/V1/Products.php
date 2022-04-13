@@ -258,7 +258,7 @@ class Products extends Base
         $attributes = $this->getArrayKey($item, 'custom_attributes');
         $attributes = $attributes ? $attributes : [];
         foreach ($attributes as $attribute) {
-            $full_attribute = $this->attributesFactory->create()
+            $fullAttribute = $this->attributesFactory->create()
                 ->addFieldToFilter('attribute_code', $attribute['attribute_code'])
                 ->getFirstItem();
 
