@@ -13,6 +13,7 @@ use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Module\Manager as ModuleManager;
 use Magento\InventoryConfigurationApi\Api\GetStockItemConfigurationInterface;
 use Magento\InventoryConfigurationApi\Exception\SkuIsNotAssignedToStockException;
+use Magento\InventorySales\Plugin\Sales\OrderManagement\AppendReservationsAfterOrderPlacementPlugin;
 use Magento\InventorySalesAdminUi\Model\ResourceModel\GetAssignedStockIdsBySku;
 use Magento\InventorySalesApi\Api\Data\SalesChannelInterface;
 use Magento\InventorySalesApi\Api\GetProductSalableQtyInterface;
@@ -130,6 +131,21 @@ class Inventory
             $stockHelper = ObjectManager::getInstance()->get(StockHelper::class);
             $stockHelper->addIsInStockFilterToCollection($collection);
         }
+    }
+
+    /**
+     * This function checks which implementation exists in the AppendReservations plugin to determine
+     * whether the salable qty of a product will reflect the ordered amount inclusive of reservation or not.
+     *
+     * As of magento/module-inventory-sales@1.1.0 the afterPlace() function was replaced with an aroundPlace()
+     * function, resulting in the reservations being applied before the order placement (despite the plugin
+     * being named "AfterOrderPlacement").
+     *
+     * @return bool
+     */
+    public function isReservationsAfter()
+    {
+        return method_exists(AppendReservationsAfterOrderPlacementPlugin::class, 'afterPlace');
     }
 
     /**
