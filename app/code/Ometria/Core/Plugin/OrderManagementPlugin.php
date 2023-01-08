@@ -68,24 +68,20 @@ class OrderManagementPlugin
         }
 
         foreach ($order->getItems() as $orderItem) {
-            // Retrieve the salable qty of the product based on configured scope
+            // Retrieve the salable qty of the product based on configured scope and after placing an order
             $salableQty = $this->getSalableQty(
                 $orderItem->getProduct(),
                 $stockPushScope
             );
 
-            // if salable qty is set and not already 0, check if push is required (null infers manage stock is disabled)
-            if ($salableQty !== null && $salableQty > 0) {
-                // Calculate new salabale quantity (after order placement)
-                $salableQtyAfterOrder = $salableQty - $orderItem->getQtyOrdered();
-                if ($salableQtyAfterOrder <= 0) {
-                    $stockData = $this->inventoryService->getPushApiStockData(
-                        (int)$orderItem->getProductId(),
-                        false
-                    );
+            // if salable qty is set to 0, then push the is_in_stock to false  (null infers manage stock is disabled)
+            if ($salableQty !== null && $salableQty == 0) {
+                $stockData = $this->inventoryService->getPushApiStockData(
+                    (int)$orderItem->getProductId(),
+                    false
+                );
 
-                    $this->pushApiService->pushRequest($stockData);
-                }
+                $this->pushApiService->pushRequest($stockData);
             }
         }
     }
