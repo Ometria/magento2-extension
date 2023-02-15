@@ -67,7 +67,7 @@ class Hash
 
         $logger->info("Http Host");
         $logger->info($_SERVER['HTTP_HOST']);
-        $calculated_signature = $this->signRequest($_SERVER['HTTP_HOST'], $method, $public_key, $private_key, $data);
+        $calculated_signature = $this->signRequest("a08f83576e0494fa3a0e1743f07c4455-1153874368.eu-west-1.elb.amazonaws.com", $method, $public_key, $private_key, $data);
         $logger->info(print_r($calculated_signature));
 
 
@@ -78,11 +78,11 @@ class Hash
 
         // check dates to prevent replay attacks
         $ts = (int) $data['request_timestamp'];
-
+        $logger->info(print_r($ts));
         if ($ts < time() - 3600) {
             return false;
         }
-
+        $logger->info("Before returning true");
         return true;
     }
 }
