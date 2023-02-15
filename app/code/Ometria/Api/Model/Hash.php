@@ -51,6 +51,11 @@ class Hash
     public function checkRequest($method, $public_key, $private_key)
     {
         $data = $this->request->getParams();
+        $writer = new \Zend_Log_Writer_Stream(BP. '/var/log/hash.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("hash Module");
+        $logger->info($data['signature']);
 
         if (!isset($data['signature'])) {
             return false;
@@ -60,7 +65,12 @@ class Hash
         $signature = $data['signature'];
         unset($data['signature']);
 
+        $logger->info("Http Host");
+        $logger->info($_SERVER['HTTP_HOST']);
         $calculated_signature = $this->signRequest($_SERVER['HTTP_HOST'], $method, $public_key, $private_key, $data);
+        $logger->info(print_r($calculated_signature));
+
+
 
         if ($calculated_signature != $signature) {
             return false;
