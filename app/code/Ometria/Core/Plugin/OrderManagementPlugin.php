@@ -68,24 +68,33 @@ class OrderManagementPlugin
         }
 
         foreach ($order->getItems() as $orderItem) {
+            if ($orderItem->getHasChildren() == true) {
+                // Skip parent items (configurable product parents etc)
+                continue;
+            }
+
             // Retrieve the salable qty of the product based on configured scope
             $salableQty = $this->getSalableQty(
                 $orderItem->getProduct(),
                 $stockPushScope
             );
 
-            // if salable qty is set and not already 0, check if push is required (null infers manage stock is disabled)
-            if ($salableQty !== null && $salableQty > 0) {
-                // Calculate new salabale quantity (after order placement)
-                $salableQtyAfterOrder = $salableQty - $orderItem->getQtyOrdered();
-                if ($salableQtyAfterOrder <= 0) {
-                    $stockData = $this->inventoryService->getPushApiStockData(
-                        (int)$orderItem->getProductId(),
-                        false
-                    );
+            if ($this->inventoryService->isReservationsAfter()) {
+                /*
+                 * Adjust salable qty to compensate for a core API inconsistency across Magento versions
+                 * which affects the salable quantity calculation based on the order in which reservations are deducted.
+                 */
+                $salableQty = $salableQty - $orderItem->getQtyOrdered();
+            }
 
-                    $this->pushApiService->pushRequest($stockData);
-                }
+            // If salable qty is set, check if push is required for zero stock (null implies manage stock is disabled)
+            if ($salableQty !== null && $salableQty <= 0) {
+                $stockData = $this->inventoryService->getPushApiStockData(
+                    (int)$orderItem->getProductId(),
+                    false
+                );
+
+                $this->pushApiService->pushRequest($stockData);
             }
         }
     }
