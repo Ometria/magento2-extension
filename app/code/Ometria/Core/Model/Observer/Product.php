@@ -126,15 +126,17 @@ class Product {
         $assocIds = array();
 
         // Standardise product IDs to array
-        if (!is_array($ids)) {
+        if ( ! empty( $ids ) && ! is_array($ids) ) {
             $ids = explode(',', $ids);
         }
 
         // Check for configurable parent products affected
-        foreach ($ids as $id) {
-            $parentIds = $this->configurableType->getParentIdsByChild($id);
-            foreach ($parentIds as $parentId) {
-                $assocIds[] = $parentId;
+        if (is_array($ids) || is_object($ids)) {
+            foreach ($ids as $id) {
+                $parentIds = $this->configurableType->getParentIdsByChild($id);
+                foreach ($parentIds as $parentId) {
+                    $assocIds[] = $parentId;
+                }
             }
         }
 
