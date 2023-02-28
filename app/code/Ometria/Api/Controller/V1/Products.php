@@ -1,4 +1,4 @@
-<?php
+git<?php
 namespace Ometria\Api\Controller\V1;
 
 use Magento\Catalog\Api\Data\ProductInterface;
@@ -391,7 +391,11 @@ class Products extends Base
     protected function getProductListingsForStore($store, $productIds, $storeListings)
     {
         $storeId = $store->getId();
-
+        $writer = new \Zend_Log_Writer_Stream(BP. '/var/log/product.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("get product listing for store");
+        $logger->info();
         $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $collectionFactory = $objectManager->create('Magento\Catalog\Model\ResourceModel\Product\CollectionFactory');
         $collection = $collectionFactory
@@ -405,7 +409,9 @@ class Products extends Base
             'Magento\Catalog\Api\Data\ProductInterface',
             $this->getRequest()->getParam('product_image', 'image')
         );
-
+        $logger->info("------------------------");
+        $logger->info(print_r($items));
+        $logger->info("------------------------");
         $baseCurrency = $store->getBaseCurrency()->getCode();
         $storeCurrency = $store->getDefaultCurrency()->getCode();
 
@@ -426,7 +432,9 @@ class Products extends Base
 
             $storeListings[$id][$storeId] = $tmp;
         }
-
+        $logger->info("******************************");
+        $logger->info(print_r($storeListings));
+        $logger->info("******************************");
         return $storeListings;
     }
 
