@@ -1,4 +1,4 @@
-git<?php
+<?php
 namespace Ometria\Api\Controller\V1;
 
 use Magento\Catalog\Api\Data\ProductInterface;
@@ -355,7 +355,11 @@ class Products extends Base
     {
         $stores = $this->storeManager->getStores();
         $store_id_lookup = array();
-
+        $writer = new \Zend_Log_Writer_Stream(BP. '/var/log/addstorelisting.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("add store listing to items");
+        $logger->info('------------------------------');
         foreach ($stores as $store) {
             $id = $store->getId();
             $store_id_lookup[$id] = $store;
@@ -370,20 +374,29 @@ class Products extends Base
                 $all_store_ids[$store_id] = $store_id;
             }
         }
-
+        $logger->info("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+        $logger->info("ITEMS");
+        $logger->info(print_r($items));
+        $logger->info("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
         $store_listings = array();
         foreach ($all_store_ids as $store_id) {
             $store = $store_id_lookup[$store_id];
             $store_listings = $this->getProductListingsForStore($store, $all_product_ids, $store_listings);
         }
-
+        $logger->info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+        $logger->info("Store Listing");
+        $logger->info(print_r($store_listings));
+        $logger->info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
         $ret = array();
         foreach($items as $itemData) {
             $id = $itemData['id'];
             $itemData['store_listings'] = isset($store_listings[$id]) ? array_values($store_listings[$id]) : array();
             $ret[] = $itemData;
         }
-
+        $logger->info("##############################");
+        $logger->info("RET");
+        $logger->info(print_r($ret));
+        $logger->info("##############################");
         return $ret;
     }
 
@@ -395,7 +408,7 @@ class Products extends Base
         $logger = new \Zend_Log();
         $logger->addWriter($writer);
         $logger->info("get product listing for store");
-        $logger->info();
+        $logger->info('------------------------------');
         $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $collectionFactory = $objectManager->create('Magento\Catalog\Model\ResourceModel\Product\CollectionFactory');
         $collection = $collectionFactory
