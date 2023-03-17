@@ -13,6 +13,7 @@ use Magento\Framework\Exception\LocalizedException;
 use Magento\Store\Model\App\Emulation as AppEmulation;
 use Ometria\Api\Helper\Filter\V1\Service as FilterService;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
+use Ometria\Api\Model\ResourceModel\Product as ProductResource;
 
 class Products extends Base
 {
@@ -47,6 +48,9 @@ class Products extends Base
 
     /** @var AppEmulation */
     private $appEmulation;
+
+    /** @var ProductResource */
+    private $productResource;
 
     protected $storeIdCache=false;
     protected $productTypeFactory;
@@ -86,7 +90,8 @@ class Products extends Base
         \Magento\Catalog\Model\Product\TypeFactory $productTypeFactory,
         StockRegistryInterface $stockRegistry,
         HttpContext $httpContext,
-        AppEmulation $appEmulation
+        AppEmulation $appEmulation,
+        ProductResource $productResource
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -110,6 +115,7 @@ class Products extends Base
         $this->stockRegistry              = $stockRegistry;
         $this->httpContext                = $httpContext;
         $this->appEmulation               = $appEmulation;
+        $this->productResource            = $productResource;
 	}
 
     public function execute()
@@ -234,14 +240,10 @@ class Products extends Base
         $tmp['url']         = $this->getArrayKey($item, 'url');
         $tmp['image_url']   = $this->getArrayKey($item, 'image_url');
         $tmp['attributes']  = [];
-        $tmp['is_active']   = $this->getArrayKey($item, 'status') !== ProductStatus::STATUS_DISABLED;
+        $tmp['is_active']   = (bool) $this->getArrayKey($item, 'status') == ProductStatus::STATUS_ENABLED;
         $tmp['stores']      = $this->getArrayKey($item, 'store_ids');
-
-        // Add parent ID if this is a variant simple product
-        if ($variantParentId = $this->getVariantParentId($item)) {
-            $tmp['parent_id'] = $variantParentId;
-            $tmp['is_variant'] = true;
-        }
+        $tmp['parent_id'] = $this->getVariantParentId($item);
+        $tmp['is_variant'] = (bool) $tmp['parent_id'] != null ? true : false;
 
         if ($this->_request->getParam('raw') === 'true') {
             $tmp['_raw'] = $item;
@@ -284,7 +286,14 @@ class Products extends Base
         if ($productTypeData = $this->getProductTypeData($item)) {
             $tmp['attributes'][] = $productTypeData;
         }
-
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("---------item----------");
+        $logger->info(print_r($item, true));
+        $logger->info("---------tmp----------");
+        $logger->info(print_r($tmp, true));
+        $logger->info("---------tmp----------////");
         return $tmp;
 	}
 
@@ -377,6 +386,12 @@ class Products extends Base
             $store_listings = $this->getProductListingsForStore($store, $all_product_ids, $store_listings);
         }
 
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("---------function addStoreListingToItems called----------");
+        $logger->info(print_r($all_store_ids, true));
+
         $ret = array();
         foreach($items as $itemData) {
             $id = $itemData['id'];
@@ -390,6 +405,15 @@ class Products extends Base
 
     protected function getProductListingsForStore($store, $productIds, $storeListings)
     {
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("---------function getProductListingsForStore called----------");
+        $logger->info("---------params for getProductListingsForStore----------");
+        $logger->info(print_r($store, true));
+        $logger->info(print_r($productIds, true));
+        $logger->info(print_r($storeListings, true));
+
         $storeId = $store->getId();
 
         $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
@@ -405,6 +429,8 @@ class Products extends Base
             'Magento\Catalog\Api\Data\ProductInterface',
             $this->getRequest()->getParam('product_image', 'image')
         );
+
+        $logger->info(print_r($items, true));
 
         $baseCurrency = $store->getBaseCurrency()->getCode();
         $storeCurrency = $store->getDefaultCurrency()->getCode();
@@ -424,6 +450,7 @@ class Products extends Base
 
             $tmp = $this->appendPricing($id, $tmp, $storeId, $baseCurrency, $storeCurrency);
 
+            $logger->info(print_r($tmp, true));
             $storeListings[$id][$storeId] = $tmp;
         }
 
@@ -556,116 +583,23 @@ class Products extends Base
         }
 
         // fetch array of Configurable Product relationships, filtered by the items being processed
-        $this->childParentConfigurableProductIds = $this->getConfigurableProductParentChildIds($allProductIds);
+        $this->childParentConfigurableProductIds = $this->productResource->getConfigurableProductParentIds($allProductIds);
 
         // fetch array of Bundle Product relationships, filtered by the items being processed
-        $this->childParentBundleProductIds = $this->getBundleProductParentChildIds($allProductIds);
+        $this->childParentBundleProductIds = $this->productResource->getBundleProductParentIds($allProductIds);
 
         // fetch array of Grouped Product relationships, filtered by the items being processed
-        $this->childParentGroupedProductIds = $this->getGroupedProductParentChildIds($allProductIds);
-    }
+        $this->childParentGroupedProductIds = $this->productResource->getGroupedProductParentIds($allProductIds);
 
-    /**
-     * Bulk version of the native method to retrieve relationships one by one.
-     * @see \Magento\ConfigurableProduct\Model\ResourceModel\Product\Type\Configurable::getParentIdsByChild
-     *
-     * @param array $childIds
-     * @return array
-     */
-    protected function getConfigurableProductParentChildIds(array $childIds)
-    {
-        $childToParentIds = [];
-
-        $connection = $this->resourceConnection->getConnection();
-
-        $select = $connection->select()
-            ->from(
-                $this->resourceConnection->getTableName('catalog_product_super_link'),
-                ['product_id', 'parent_id']
-            )
-            ->where(
-                'product_id IN (?)',
-                $childIds
-            )
-            // order by the oldest links first so the iterator will end with the most recent link
-            ->order('link_id ASC');
-
-        $result = $connection->fetchAll($select);
-        foreach ($result as $_row) {
-            $childToParentIds[$_row['product_id']] = $_row['parent_id'];
-        }
-
-        return $childToParentIds;
-    }
-
-    /**
-     * Bulk version of the native method to retrieve relationships one by one.
-     * @see \Magento\Bundle\Model\ResourceModel\Selection::getParentIdsByChild
-     *
-     * @param array $childIds
-     * @return array
-     */
-    protected function getBundleProductParentChildIds(array $childIds)
-    {
-        $childToParentIds = [];
-
-        $connection = $this->resourceConnection->getConnection();
-
-        $select = $connection->select()
-            ->from(
-                $this->resourceConnection->getTableName('catalog_product_bundle_selection'),
-                ['parent_product_id', 'product_id']
-            )
-            ->where(
-                'product_id IN (?)',
-                $childIds
-            )
-            // order by the oldest selections first so the iterator will end with the most recent link
-            ->order('selection_id ASC');
-
-        $result = $connection->fetchAll($select);
-        foreach ($result as $_row) {
-            $childToParentIds[$_row['product_id']] = $_row['parent_product_id'];
-        }
-
-        return $childToParentIds;
-    }
-
-    /**
-     * Bulk version of the native method to retrieve relationships one by one.
-     * @see \Magento\GroupedProduct\Model\ResourceModel\Product\Link::getParentIdsByChild
-     *
-     * @param array $childIds
-     * @return array
-     */
-    protected function getGroupedProductParentChildIds(array $childIds)
-    {
-        $childToParentIds = [];
-
-        $connection = $this->resourceConnection->getConnection();
-
-        $select = $connection->select()
-            ->from(
-                $this->resourceConnection->getTableName('catalog_product_link'),
-                ['product_id', 'linked_product_id']
-            )
-            ->where(
-                'linked_product_id IN (?)',
-                $childIds
-            )
-            ->where(
-                'link_type_id = ?',
-                \Magento\GroupedProduct\Model\ResourceModel\Product\Link::LINK_TYPE_GROUPED
-            )
-            // order by the oldest links first so the iterator will end with the most recent link
-            ->order('link_id ASC');
-
-        $result = $connection->fetchAll($select);
-        foreach ($result as $_row) {
-            $childToParentIds[$_row['linked_product_id']] = $_row['product_id'];
-        }
-
-        return $childToParentIds;
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("---------childParentConfigurableProductIds----------");
+        $logger->info(print_r($this->childParentConfigurableProductIds, true));
+        $logger->info("---------childParentBundleProductIds----------");
+        $logger->info(print_r($this->childParentBundleProductIds, true));
+        $logger->info("---------childParentGroupedProductIds----------");
+        $logger->info(print_r($this->childParentGroupedProductIds, true));
     }
 
     /**
@@ -684,7 +618,7 @@ class Products extends Base
         ];
         $visibility = $this->getArrayKey($item, 'visibility');
         if (in_array($visibility, $visibleInSiteVisibilities)) {
-            return false;
+            return null;
         }
 
         // if the product is associated to a configurable product, return the parent ID
@@ -702,7 +636,7 @@ class Products extends Base
             return $this->childParentGroupedProductIds[$productId];
         }
 
-        return false;
+        return null;
     }
 
     /**
