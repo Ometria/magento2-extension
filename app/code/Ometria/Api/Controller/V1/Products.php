@@ -286,14 +286,7 @@ class Products extends Base
         if ($productTypeData = $this->getProductTypeData($item)) {
             $tmp['attributes'][] = $productTypeData;
         }
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("---------item----------");
-        $logger->info(print_r($item, true));
-        $logger->info("---------tmp----------");
-        $logger->info(print_r($tmp, true));
-        $logger->info("---------tmp----------////");
+
         return $tmp;
 	}
 
@@ -572,16 +565,6 @@ class Products extends Base
 
         // fetch array of Grouped Product relationships, filtered by the items being processed
         $this->childParentGroupedProductIds = $this->productResource->getGroupedProductParentIds($allProductIds);
-
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("---------childParentConfigurableProductIds----------");
-        $logger->info(print_r($this->childParentConfigurableProductIds, true));
-        $logger->info("---------childParentBundleProductIds----------");
-        $logger->info(print_r($this->childParentBundleProductIds, true));
-        $logger->info("---------childParentGroupedProductIds----------");
-        $logger->info(print_r($this->childParentGroupedProductIds, true));
     }
 
     /**
