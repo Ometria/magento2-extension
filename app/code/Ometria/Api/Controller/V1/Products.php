@@ -286,14 +286,7 @@ class Products extends Base
         if ($productTypeData = $this->getProductTypeData($item)) {
             $tmp['attributes'][] = $productTypeData;
         }
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("---------item----------");
-        $logger->info(print_r($item, true));
-        $logger->info("---------tmp----------");
-        $logger->info(print_r($tmp, true));
-        $logger->info("---------tmp----------////");
+        
         return $tmp;
 	}
 
@@ -386,12 +379,12 @@ class Products extends Base
             $store_listings = $this->getProductListingsForStore($store, $all_product_ids, $store_listings);
         }
 
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/listings.log');
         $logger = new \Zend_Log();
         $logger->addWriter($writer);
         $logger->info("---------function addStoreListingToItems called----------");
         $logger->info(print_r($all_store_ids, true));
-
+        $logger->info("---------------------------------------------------------");
         $ret = array();
         foreach($items as $itemData) {
             $id = $itemData['id'];
@@ -405,15 +398,17 @@ class Products extends Base
 
     protected function getProductListingsForStore($store, $productIds, $storeListings)
     {
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/ProductListingsForStore.log');
         $logger = new \Zend_Log();
         $logger->addWriter($writer);
         $logger->info("---------function getProductListingsForStore called----------");
         $logger->info("---------params for getProductListingsForStore----------");
         $logger->info(print_r($store, true));
+        $logger->info("------------------------------------------------------------");
         $logger->info(print_r($productIds, true));
+        $logger->info("------------------------------------------------------------");
         $logger->info(print_r($storeListings, true));
-
+        $logger->info("------------------------------------------------------------");
         $storeId = $store->getId();
 
         $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
@@ -429,8 +424,6 @@ class Products extends Base
             'Magento\Catalog\Api\Data\ProductInterface',
             $this->getRequest()->getParam('product_image', 'image')
         );
-
-        $logger->info(print_r($items, true));
 
         $baseCurrency = $store->getBaseCurrency()->getCode();
         $storeCurrency = $store->getDefaultCurrency()->getCode();
@@ -450,7 +443,7 @@ class Products extends Base
 
             $tmp = $this->appendPricing($id, $tmp, $storeId, $baseCurrency, $storeCurrency);
 
-            $logger->info(print_r($tmp, true));
+            
             $storeListings[$id][$storeId] = $tmp;
         }
 
@@ -591,15 +584,7 @@ class Products extends Base
         // fetch array of Grouped Product relationships, filtered by the items being processed
         $this->childParentGroupedProductIds = $this->productResource->getGroupedProductParentIds($allProductIds);
 
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("---------childParentConfigurableProductIds----------");
-        $logger->info(print_r($this->childParentConfigurableProductIds, true));
-        $logger->info("---------childParentBundleProductIds----------");
-        $logger->info(print_r($this->childParentBundleProductIds, true));
-        $logger->info("---------childParentGroupedProductIds----------");
-        $logger->info(print_r($this->childParentGroupedProductIds, true));
+        
     }
 
     /**
