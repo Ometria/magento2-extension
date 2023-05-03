@@ -318,7 +318,12 @@ class Orders extends Base
             $lineItems = $order->getItemsCollection();
             $indexedParentChild = $this->indexLineItemsByParentAndChild($lineItems);
             $newLineItems = [];
-
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/checkorder.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+            $logger->info(print_r($indexedParentChild, true));
+            $logger->info("$$$$$$$$$$$$$$$$$$$$$$$$$$$");
             foreach ($indexedParentChild as $lineItem) {
                 $new = [
                     "product" => [
