@@ -30,7 +30,7 @@ class Auth implements ObserverInterface
      * @param Observer $observer
      */
     public function execute(Observer $observer)
-    {
+    {   print("##################################### Inside EXecute ############################### ")
         return $this->checkHeader($observer);
     }
 
@@ -42,7 +42,11 @@ class Auth implements ObserverInterface
         $publicKey  = $this->config->get('general/apikey');
         $privateKey = $this->config->get('general/privatekey');
         $methodName = $this->getMethodNameFromObserver($observer);
-
+        $writer = new \Laminas\Log\Writer\Stream(BP . '/var/log/auth.log');
+        $logger = new  \Laminas\Log\Logger();
+        $logger->addWriter($writer);
+        $logger->info('Inside Checkheader to check if we are getting public key or not !!');
+        
         $isAuthorized = $this->hash->checkRequest($methodName,$publicKey,$privateKey);
 
         if (!$isAuthorized) {
