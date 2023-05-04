@@ -30,7 +30,7 @@ class Auth implements ObserverInterface
      * @param Observer $observer
      */
     public function execute(Observer $observer)
-    {   print("##################################### Inside EXecute ############################### ")
+    {   print("##################################### Inside EXecute ############################### ");
         return $this->checkHeader($observer);
     }
 
