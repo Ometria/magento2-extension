@@ -322,6 +322,8 @@ class Orders extends Base
             $logger = new \Zend_Log();
             $logger->addWriter($writer);
             $logger->info("$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+            $logger->info(print_r($order, true));
+            $logger->info("$$$$$$$$$$$$$$$$$$$$$$$$$$$");
             $logger->info(print_r($indexedParentChild, true));
             $logger->info("$$$$$$$$$$$$$$$$$$$$$$$$$$$");
             foreach ($indexedParentChild as $lineItem) {
@@ -389,7 +391,9 @@ class Orders extends Base
             $item['lineitems'] = $newLineItems;
             $items[$key] = $item;
         }
-
+        $logger->info("****************************");
+        $logger->info(print_r($items, true));
+        $logger->info("****************************");
         return $items;
     }
 
