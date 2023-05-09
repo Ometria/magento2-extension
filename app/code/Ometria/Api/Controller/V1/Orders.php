@@ -88,12 +88,6 @@ class Orders extends Base
         } else {
             $data = $this->getItemsData($items);
         }
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/orderdetails.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("--------------------------");
-        $logger->info(print_r($data, true));
-        $logger->info("--------------------------");
         return $this->resultJsonFactory->create()->setData($data);
     }
 
@@ -202,7 +196,12 @@ class Orders extends Base
 
             $items[$key] = $new;
         }
-
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/orderdetails.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("--------------------------");
+        $logger->info(print_r($items, true));
+        $logger->info("--------------------------");
         return $items;
     }
 
