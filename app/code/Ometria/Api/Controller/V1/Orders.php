@@ -88,7 +88,12 @@ class Orders extends Base
         } else {
             $data = $this->getItemsData($items);
         }
-
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/orderdetails.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("--------------------------");
+        $logger->info(print_r($data, true));
+        $logger->info("--------------------------");
         return $this->resultJsonFactory->create()->setData($data);
     }
 
@@ -318,12 +323,7 @@ class Orders extends Base
             $lineItems = $order->getItemsCollection();
             $indexedParentChild = $this->indexLineItemsByParentAndChild($lineItems);
             $newLineItems = [];
-            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/checkorder.log');
-            $logger = new \Zend_Log();
-            $logger->addWriter($writer);
-            $logger->info("$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-            $logger->info(print_r($indexedParentChild, true));
-            $logger->info("$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+            
             foreach ($indexedParentChild as $lineItem) {
                 $new = [
                     "product" => [
@@ -389,9 +389,6 @@ class Orders extends Base
             $item['lineitems'] = $newLineItems;
             $items[$key] = $item;
         }
-        $logger->info("****************************");
-        $logger->info(print_r($items, true));
-        $logger->info("****************************");
         return $items;
     }
 
