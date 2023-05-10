@@ -38,7 +38,16 @@ class Hash
         $data = json_encode($data);
         $buffer = array($domain, $method, $data, $public_key);
         $buffer_str = implode(":", $buffer);
-
+        $writer = new \Laminas\Log\Writer\Stream(BP . '/var/log/checkrequest.log');
+        $logger = new  \Laminas\Log\Logger();
+        $logger->addWriter($writer);
+        $logger->info('***************************');
+        $logger->info('Inside checkRequest to check if we are getting public key or not !!');
+        $logger->info($method);
+        $logger->info($public_key);
+        $logger->info($private_key);
+        $logger->info(print_r($data, true));
+        $logger->info('***************************');
         return hash_hmac('sha256', $buffer_str, $private_key);
     }
 
