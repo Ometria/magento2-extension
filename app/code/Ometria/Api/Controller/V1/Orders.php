@@ -126,7 +126,12 @@ class Orders extends Base
         $items = $this->addAddresses($items);
         $items = $this->addLineItems($items);
         $items = $this->replaceIdWithIncrementId($items);
-
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/zorderdetails.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("***************************");
+        $logger->info(print_r($items, true));
+        $logger->info("***************************");
         return $items;
     }
 
@@ -196,12 +201,6 @@ class Orders extends Base
 
             $items[$key] = $new;
         }
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/orderdetails.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("--------------------------");
-        $logger->info(print_r($items, true));
-        $logger->info("--------------------------");
         return $items;
     }
 
