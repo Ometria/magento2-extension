@@ -126,10 +126,10 @@ class Orders extends Base
         $items = $this->addAddresses($items);
         $items = $this->addLineItems($items);
         $items = $this->replaceIdWithIncrementId($items);
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/zorderdetails.log');
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
         $logger = new \Zend_Log();
         $logger->addWriter($writer);
-        $logger->info("***************************");
+        $logger->info("Order details ***********");
         $logger->info(print_r($items, true));
         $logger->info("***************************");
         return $items;
