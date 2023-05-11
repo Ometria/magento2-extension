@@ -15,6 +15,7 @@ use Magento\Weee\Helper\Data as WeeeHelper;
 use Ometria\Api\Helper\Format\V1\Orders as Helper;
 use Ometria\Api\Helper\Order\IsValid as OrderIsValidHelper;
 use Ometria\Api\Helper\Service\Filterable\Service as FilterableService;
+use Ometria\Core\Helper\Config;
 
 class Orders extends Base
 {
@@ -42,6 +43,9 @@ class Orders extends Base
     /** @var WeeeHelper */
     private $weeeHelper;
 
+    /** @var Config */
+    protected $helperConfig;
+
     /**
      * @param Context $context
      * @param JsonFactory $resultJsonFactory
@@ -52,6 +56,7 @@ class Orders extends Base
      * @param OrderCollectionFactory $orderCollectionFactory
      * @param OrderIsValidHelper $orderValidTester
      * @param WeeeHelper $weeeHelper
+     * @param Config $helperConfig
      */
     public function __construct(
         Context $context,
@@ -62,7 +67,8 @@ class Orders extends Base
         OrderAddressFactory $orderAddressFactory,
         OrderCollectionFactory $orderCollectionFactory,
         OrderIsValidHelper $orderValidTester,
-        WeeeHelper $weeeHelper
+        WeeeHelper $weeeHelper,
+        Config $helperConfig
     ) {
         parent::__construct($context);
 
@@ -74,6 +80,7 @@ class Orders extends Base
         $this->orderCollectionFactory = $orderCollectionFactory;
         $this->orderValidTester = $orderValidTester;
         $this->weeeHelper = $weeeHelper;
+        $this->helperConfig = $helperConfig;
     }
 
     /**
@@ -126,12 +133,16 @@ class Orders extends Base
         $items = $this->addAddresses($items);
         $items = $this->addLineItems($items);
         $items = $this->replaceIdWithIncrementId($items);
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("Order details ***********");
-        $logger->info(print_r($items, true));
-        $logger->info("***************************");
+        // Getting Show Logs value 
+        $statusLogValue = $this->helperConfig->getLogConfig();
+        if ($statusLogValue){
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("Order details ***********");
+            $logger->info(print_r($items, true));
+            $logger->info("***************************");
+        }
         return $items;
     }
 

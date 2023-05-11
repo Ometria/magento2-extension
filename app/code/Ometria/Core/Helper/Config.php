@@ -122,4 +122,14 @@ class Config extends AbstractHelper
     {
         return (string) $this->coreHelperMageConfig->get('ometria/advanced/cookiebot_classification');
     }
+
+    /**
+     * @param null
+     * @return string
+     */
+    public function getLogConfig()
+    {
+        $statusLogValue = $this->scopeConfig->getValue('ometria_analytics/data_export/show_log');
+        return $statusLogValue;
+    }
 }
