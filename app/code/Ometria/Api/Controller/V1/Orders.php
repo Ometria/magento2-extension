@@ -333,7 +333,7 @@ class Orders extends Base
             $lineItems = $order->getItemsCollection();
             $indexedParentChild = $this->indexLineItemsByParentAndChild($lineItems);
             $newLineItems = [];
-            
+
             foreach ($indexedParentChild as $lineItem) {
                 $new = [
                     "product" => [
