@@ -133,22 +133,17 @@ class Orders extends Base
         $items = $this->addAddresses($items);
         $items = $this->addLineItems($items);
         $items = $this->replaceIdWithIncrementId($items);
-        print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
         // Getting Show Logs value 
         $statusLogValue = $this->helperConfig->getLogConfig();
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("Status Value ***********");
-        $logger->info($statusLogValue);
-        $logger->info("***************************");
         print($statusLogValue);
         if ($statusLogValue){
-            $logger->info("Order details ***********");
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("Order details -----------------");
             $logger->info(print_r($items, true));
-            $logger->info("***************************");
+            $logger->info("-------------------------------");
         }
-        print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
         return $items;
     }
 
