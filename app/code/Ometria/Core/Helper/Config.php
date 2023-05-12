@@ -129,7 +129,7 @@ class Config extends AbstractHelper
      */
     public function getLogConfig()
     {
-        $statusLogValue = $this->scopeConfig->getValue('ometria_analytics/data_export/show_log');
+        $statusLogValue = $this->scopeConfig->getValue('ometria/advanced/show_log');
         return $statusLogValue;
     }
 }
