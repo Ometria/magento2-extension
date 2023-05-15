@@ -135,7 +135,6 @@ class Orders extends Base
         $items = $this->replaceIdWithIncrementId($items);
         // Getting Show Logs value 
         $statusLogValue = $this->helperConfig->getLogConfig();
-        print($statusLogValue);
         if ($statusLogValue){
             $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
             $logger = new \Zend_Log();
