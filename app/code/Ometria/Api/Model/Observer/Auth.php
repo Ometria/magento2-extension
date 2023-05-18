@@ -5,6 +5,8 @@ use Magento\Framework\Event\Observer;
 use Magento\Framework\Event\ObserverInterface;
 use Ometria\Api\Helper\Config as ConfigHelper;
 use Ometria\Api\Model\Hash;
+use Psr\Log\LoggerInterface;
+
 
 class Auth implements ObserverInterface
 {
@@ -18,19 +20,24 @@ class Auth implements ObserverInterface
      * @param ConfigHelper $config
      * @param Hash $hash
      */
+
+    protected $logger;
+
     public function __construct(
         ConfigHelper $config,
-        Hash $hash
+	Hash $hash,
+	LoggerInterface $logger
     ) {
         $this->config = $config;
-        $this->hash = $hash;
+	$this->hash = $hash;
+	$this->logger = $logger;
     }
 
     /**
      * @param Observer $observer
      */
     public function execute(Observer $observer)
-    {   print("##################################### Inside EXecute ############################### ");
+    {   $this->logger->info("##################################### Inside EXecute ############################### ");
         return $this->checkHeader($observer);
     }
 
@@ -41,11 +48,11 @@ class Auth implements ObserverInterface
     {
         $publicKey  = $this->config->get('general/apikey');
         $privateKey = $this->config->get('general/privatekey');
-        $methodName = $this->getMethodNameFromObserver($observer);
-        $writer = new \Laminas\Log\Writer\Stream(BP . '/var/log/auth.log');
-        $logger = new  \Laminas\Log\Logger();
-        $logger->addWriter($writer);
-        $logger->info('Inside Checkheader to check if we are getting public key or not !!');
+	$methodName = $this->getMethodNameFromObserver($observer);
+	$this->logger->info('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$');
+        $this->logger->info('This is a custom log message.');
+	$this->logger->info('Inside Checkheader to check if we are getting public key or not !!');
+	$this->logger->info('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$');
         
         $isAuthorized = $this->hash->checkRequest($methodName,$publicKey,$privateKey);
 

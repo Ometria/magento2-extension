@@ -2,19 +2,24 @@
 namespace Ometria\Api\Model;
 
 use Magento\Framework\App\RequestInterface;
+use Psr\Log\LoggerInterface;
 
 class Hash
 {
     /** @var RequestInterface */
     private $request;
+    
+    protected $logger;
 
     /**
      * @param RequestInterface $request
      */
     public function __construct(
-        RequestInterface $request
+	    RequestInterface $request,
+	    LoggerInterface $logger
     ) {
-        $this->request = $request;
+	    $this->request = $request;
+	    $this->logger = $logger;
     }
 
     /**
@@ -26,7 +31,7 @@ class Hash
      * @return string
      */
     public function signRequest($domain, $method, $public_key, $private_key, $data=array())
-    {   print("##################################### Inside signRequest ############################### ");
+    {   $this->logger->info("##################################### Inside signRequest ############################### ");
         $data = array_filter($data);
 
         if (array_key_exists('request_timestamp', $data)) {
@@ -37,11 +42,11 @@ class Hash
 
         $data = json_encode($data);
         $buffer = array($domain, $method, $data, $public_key);
-        $buffer_str = implode(":", $buffer);
-        $writer = new \Laminas\Log\Writer\Stream(BP . '/var/log/SignRequest.log');
-        $logger = new  \Laminas\Log\Logger();
-        $logger->addWriter($writer);
-        $logger->info('Inside SignRequest to check if we are getting public key or not !!');
+	$buffer_str = implode(":", $buffer);
+	$this->logger->info('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&');
+        $this->logger->info('This is a custom log message.');
+	$this->logger->info('Inside SignRequest to check if we are getting public key or not !!');
+	$this->logger->info('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&');
         return hash_hmac('sha256', $buffer_str, $private_key);
     }
 
@@ -52,15 +57,15 @@ class Hash
      * @return bool
      */
     public function checkRequest($method, $public_key, $private_key)
-    { print("##################################### Inside CheckRequest ############################### ");
+    {   $this->logger->info("##################################### Inside CheckRequest ############################### ");
         $data = $this->request->getParams();
-        $writer = new \Laminas\Log\Writer\Stream(BP . '/var/log/checkrequest.log');
-        $logger = new  \Laminas\Log\Logger();
-        $logger->addWriter($writer);
-        $logger->info('Inside checkRequest to check if we are getting public key or not !!');
-        $logger->info($method);
-        $logger->info($public_key);
-        $logger->info($private_key);
+        $this->logger->info('***************************************************************************************');
+        $this->logger->info('This is a custom log message.');
+        $this->logger->info('Inside checkRequest to check if we are getting public key or not !!');
+        $this->logger->info($method);
+        $this->logger->info($public_key);
+	$this->logger->info($private_key);
+	$this->logger->info('***************************************************************************************');
 
 
         if (!isset($data['signature'])) {
