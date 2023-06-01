@@ -9,6 +9,7 @@ use Magento\Framework\Api\SearchCriteriaBuilder;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Newsletter\Model\ResourceModel\Subscriber\Collection as SubscriberCollection;
 use Ometria\Api\Helper\CustomerData;
 use Ometria\Api\Helper\Format\V1\Customers as Helper;
@@ -41,6 +42,9 @@ class Customers extends Base
     /** @var RewardPointsService */
     private $rewardPointsService;
 
+    /** @var ScopeConfigInterface */
+    private $scopeConfig;
+
     /** @var array */
     private $customerIdsOfNewsLetterSubscribers = [];
 
@@ -60,7 +64,8 @@ class Customers extends Base
         CustomerData $customerDataHelper,
         SearchCriteriaBuilder $searchCriteriaBuilder,
         GroupRepositoryInterface $groupRepository,
-        RewardPointsService $rewardPointsService
+        RewardPointsService $rewardPointsService,
+        ScopeConfigInterface $scopeConfig
     ) {
         parent::__construct($context);
 
@@ -73,6 +78,7 @@ class Customers extends Base
         $this->searchCriteriaBuilder        = $searchCriteriaBuilder;
         $this->groupRepository              = $groupRepository;
         $this->rewardPointsService          = $rewardPointsService;
+        $this->scopeConfig                  = $scopeConfig;
         $this->genderOptions                = $this->customerMetadataInterface
             ->getAttributeMetadata('gender')
             ->getOptions();
@@ -120,6 +126,11 @@ class Customers extends Base
      */
     public function getItemsData($items)
     {
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/customer-details.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("Customer details -----------------");
+
         $subscriberCollection = $this->getSubscriberCollection($items);
 
         $items = array_map(function ($item) use ($subscriberCollection) {
@@ -139,6 +150,15 @@ class Customers extends Base
             $new["country_id"] = $this->customerDataHelper->getCountryId($item);
             $new["store_id"] = array_key_exists('store_id', $item) ? $item['store_id'] : null;
 
+            if (array_key_exists('store_id', $item)) {
+                $logger->info($item['store_id']);
+                $new["preferred_lang"] = $this->scopeConfig->getValue(
+                    'general/locale/code',
+                    \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
+                    $item['store_id']
+                );
+            }
+
             if ($this->_request->getParam('raw') != null) {
                 $new['_raw'] = $item;
 
@@ -147,6 +167,8 @@ class Customers extends Base
                 ];
             }
 
+            $logger->info(print_r($items, true));
+            $logger->info("-------------------------------");
             return $new;
         }, $items);
 
