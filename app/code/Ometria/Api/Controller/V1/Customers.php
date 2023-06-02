@@ -133,7 +133,10 @@ class Customers extends Base
 
         $subscriberCollection = $this->getSubscriberCollection($items);
 
-        $items = array_map(function ($item) use ($subscriberCollection) {
+	$items = array_map(function ($item) use ($subscriberCollection) {
+	$writer = new \Zend_Log_Writer_Stream(BP. '/var/log/customer.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);	
 	$logger->info("before if-----------------------------");
 	
             $new = Helper::getBlankArray();
