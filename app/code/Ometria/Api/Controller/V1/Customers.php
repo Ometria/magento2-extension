@@ -134,9 +134,10 @@ class Customers extends Base
         $subscriberCollection = $this->getSubscriberCollection($items);
 
         $items = array_map(function ($item) use ($subscriberCollection) {
-
+	$logger->info("before if-----------------------------");
+	
             $new = Helper::getBlankArray();
-
+        
             $new["@type"] = "contact";
             $new["id"] = array_key_exists('id', $item) ? $item['id'] : '';
             $new["email"] = array_key_exists('email', $item) ? $item['email'] : '';
@@ -150,12 +151,13 @@ class Customers extends Base
             $new["country_id"] = $this->customerDataHelper->getCountryId($item);
             $new["store_id"] = array_key_exists('store_id', $item) ? $item['store_id'] : null;
 
-            if (array_key_exists('store_id', $item)) {
-                $logger->info($item['store_id']);
-                $new["preferred_lang"] = $this->scopeConfig->getValue(
+	    if (array_key_exists('store_id', $item)) {
+		    $logger->info("Inside if------------------------------");
+		    $logger->info($items['store_id']);
+		    $new["preferred_lang"] = $this->scopeConfig->getValue(
                     'general/locale/code',
                     \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
-                    $item['store_id']
+                    $items['store_id']
                 );
             }
 
@@ -167,7 +169,8 @@ class Customers extends Base
                 ];
             }
 
-            $logger->info(print_r($items, true));
+	    $logger->info(print_r($items, true));
+	    $logger->info(print_r($new, true));
             $logger->info("-------------------------------");
             return $new;
         }, $items);
