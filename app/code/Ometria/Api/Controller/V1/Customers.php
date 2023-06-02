@@ -132,7 +132,7 @@ class Customers extends Base
 
 	$items = array_map(function ($item) use ($subscriberCollection) {
 		
-		$writer = new \Zend_Log_Writer_Stream(BP. '/var/log/custome-details.log');
+		$writer = new \Zend_Log_Writer_Stream(BP. '/var/log/customer-details.log');
 		$logger = new \Zend_Log();
 	        $logger->addWriter($writer);
                 $logger->info("---------------------Customer details-----------------------");	
@@ -171,7 +171,7 @@ class Customers extends Base
                 ];
             }
 
-	    $logger->info(print_r($items, true));
+	    
 	    $logger->info(print_r($new, true));
             $logger->info("-------------------------------");
             return $new;
