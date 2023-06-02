@@ -126,18 +126,17 @@ class Customers extends Base
      */
     public function getItemsData($items)
     {
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/customer-details.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("Customer details -----------------");
+        
 
         $subscriberCollection = $this->getSubscriberCollection($items);
 
 	$items = array_map(function ($item) use ($subscriberCollection) {
-	$writer = new \Zend_Log_Writer_Stream(BP. '/var/log/customer.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);	
-	$logger->info("before if-----------------------------");
+		
+		$writer = new \Zend_Log_Writer_Stream(BP. '/var/log/custome-details.log');
+		$logger = new \Zend_Log();
+	        $logger->addWriter($writer);
+                $logger->info("---------------------Customer details-----------------------");	
+	        $logger->info("before if-----------------------------");
 	
             $new = Helper::getBlankArray();
         
@@ -156,11 +155,11 @@ class Customers extends Base
 
 	    if (array_key_exists('store_id', $item)) {
 		    $logger->info("Inside if------------------------------");
-		    $logger->info($items['store_id']);
+		    $logger->info($item['store_id']);
 		    $new["preferred_lang"] = $this->scopeConfig->getValue(
                     'general/locale/code',
                     \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
-                    $items['store_id']
+                    $item['store_id']
                 );
             }
 
