@@ -41,6 +41,10 @@ class Product extends AbstractDb
     {
         $childToParentIds = [];
 
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("inside config func");
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
         $select = $connection->select()
@@ -49,7 +53,7 @@ class Product extends AbstractDb
                 ['link_id', 'product_id']
             )->join(
                 ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
-                'e.' . $metadata->getLinkField() . ' = link_table.parent_id',
+                'e.' . mysql_real_escape_string($metadata->getLinkField()) . ' = link_table.parent_id',
                 ['e.entity_id']
             )->where(
                 'link_table.product_id IN(?)',
@@ -60,6 +64,7 @@ class Product extends AbstractDb
             );
 
         $result = $connection->fetchAll($select);
+       
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['entity_id'];
         }
@@ -86,7 +91,7 @@ class Product extends AbstractDb
                 ['selection_id', 'product_id']
             )->join(
                 ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
-                'e.' . $metadata->getLinkField() . ' = link_table.parent_product_id',
+                'e.' . mysql_real_escape_string($metadata->getLinkField()) . ' = link_table.parent_product_id',
                 ['e.entity_id']
             )->where(
                 'link_table.product_id IN(?)',
@@ -96,6 +101,7 @@ class Product extends AbstractDb
             );
 
         $result = $connection->fetchAll($select);
+       
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['entity_id'];
         }
@@ -122,7 +128,7 @@ class Product extends AbstractDb
                 ['link_id', 'linked_product_id']
             )->join(
                 ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
-                'e.' . $metadata->getLinkField() . ' = link_table.product_id',
+                'e.' . mysql_real_escape_string($metadata->getLinkField()) . ' = link_table.product_id',
                 ['e.entity_id']
             )->where(
                 'link_type_id = ?',
