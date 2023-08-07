@@ -64,7 +64,7 @@ class Product extends AbstractDb
         $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
         $logger = new \Zend_Log();
         $logger->addWriter($writer);
-        $logger->info("inside congifurable product function");
+        $logger->info("inside configurable product function");
         $logger->info($result);
        
         foreach ($result as $_row) {
