@@ -43,14 +43,14 @@ class Product extends AbstractDb
 
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
-        $linkField =  mysqli_real_escape_string($connection,$metadata->getLinkField());
+        $linkField = filter_var($metadata->getLinkField(), FILTER_SANITIZE_STRING);
         $select = $connection->select()
             ->from(
                 ['link_table' => $connection->getTableName('catalog_product_super_link')],
                 ['link_id', 'product_id']
             )->join(
                 ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
-                'e.' . $linkField . ' = link_table.parent_id',
+                'e.' .$linkField . ' = link_table.parent_id',
                 ['e.entity_id']
             )->where(
                 'link_table.product_id IN(?)',
@@ -59,7 +59,12 @@ class Product extends AbstractDb
             ->order(
                 'link_id ASC'
             );
-
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("inside configurable product function");
+            $logger->info($select);
+           
         $result = $connection->fetchAll($select);
         $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
         $logger = new \Zend_Log();
@@ -87,7 +92,7 @@ class Product extends AbstractDb
 
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
-        $linkField =  mysqli_real_escape_string($connection,$metadata->getLinkField());
+        $linkField = filter_var($metadata->getLinkField(), FILTER_SANITIZE_STRING);
         $select = $connection->select()
             ->from(
                 ['link_table' => $connection->getTableName('catalog_product_bundle_selection')],
@@ -102,7 +107,11 @@ class Product extends AbstractDb
             )->order(
                 'selection_id ASC'
             );
-
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("inside Bundle product function");
+            $logger->info($select);
         $result = $connection->fetchAll($select);
         $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
         $logger = new \Zend_Log();
@@ -129,14 +138,14 @@ class Product extends AbstractDb
 
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
-        $linkField =  mysqli_real_escape_string($connection,$metadata->getLinkField());
+        $linkField = filter_var($metadata->getLinkField(), FILTER_SANITIZE_STRING);
         $select = $connection->select()
             ->from(
                 ['link_table' => $connection->getTableName('catalog_product_link')],
                 ['link_id', 'linked_product_id']
             )->join(
                 ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
-                'e.' . $linkField . ' = link_table.product_id',
+                'e.' . $linkField. ' = link_table.product_id',
                 ['e.entity_id']
             )->where(
                 'link_type_id = ?',
@@ -148,7 +157,12 @@ class Product extends AbstractDb
             )->order(
                 'link_id ASC'
             );
-
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("inside grouped product function");
+            $logger->info($select);
+    
         $result = $connection->fetchAll($select);
         $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
         $logger = new \Zend_Log();
