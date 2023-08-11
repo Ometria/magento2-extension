@@ -59,18 +59,8 @@ class Product extends AbstractDb
             ->order(
                 'link_id ASC'
             );
-            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-            $logger = new \Zend_Log();
-            $logger->addWriter($writer);
-            $logger->info("inside configurable product function");
-            $logger->info($select);
            
         $result = $connection->fetchAll($select);
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("inside configurable product function");
-        $logger->info($result);
        
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['entity_id'];
@@ -107,17 +97,9 @@ class Product extends AbstractDb
             )->order(
                 'selection_id ASC'
             );
-            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-            $logger = new \Zend_Log();
-            $logger->addWriter($writer);
-            $logger->info("inside Bundle product function");
-            $logger->info($select);
+           
         $result = $connection->fetchAll($select);
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("inside Bundle product function");
-        $logger->info($result);
+       
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['entity_id'];
         }
@@ -157,18 +139,10 @@ class Product extends AbstractDb
             )->order(
                 'link_id ASC'
             );
-            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-            $logger = new \Zend_Log();
-            $logger->addWriter($writer);
-            $logger->info("inside grouped product function");
-            $logger->info($select);
+           
     
         $result = $connection->fetchAll($select);
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("inside grouped product function");
-        $logger->info($result);
+        
 
         foreach ($result as $_row) {
             $childToParentIds[$_row['linked_product_id']] = $_row['entity_id'];
