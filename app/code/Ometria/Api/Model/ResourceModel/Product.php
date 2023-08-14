@@ -43,7 +43,7 @@ class Product extends AbstractDb
 
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
-        $linkField = filter_var($metadata->getLinkField(), FILTER_SANITIZE_STRING);
+        $linkField = htmlspecialchars($metadata->getLinkField());
         $select = $connection->select()
             ->from(
                 ['link_table' => $connection->getTableName('catalog_product_super_link')],
@@ -82,7 +82,7 @@ class Product extends AbstractDb
 
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
-        $linkField = filter_var($metadata->getLinkField(), FILTER_SANITIZE_STRING);
+        $linkField = htmlspecialchars($metadata->getLinkField());
         $select = $connection->select()
             ->from(
                 ['link_table' => $connection->getTableName('catalog_product_bundle_selection')],
@@ -120,7 +120,7 @@ class Product extends AbstractDb
 
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
-        $linkField = filter_var($metadata->getLinkField(), FILTER_SANITIZE_STRING);
+        $linkField = htmlspecialchars($metadata->getLinkField());
         $select = $connection->select()
             ->from(
                 ['link_table' => $connection->getTableName('catalog_product_link')],
