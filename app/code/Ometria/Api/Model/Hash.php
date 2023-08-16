@@ -69,7 +69,7 @@ class Hash
         // check dates to prevent replay attacks
         $ts = (int) $data['request_timestamp'];
 
-        if ($ts < time() - 3600) {
+        if ($ts < time() - 1200) {
             return false;
         }
 

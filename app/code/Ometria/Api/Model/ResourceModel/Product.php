@@ -43,13 +43,14 @@ class Product extends AbstractDb
 
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
+        $linkField = htmlspecialchars($metadata->getLinkField());
         $select = $connection->select()
             ->from(
                 ['link_table' => $connection->getTableName('catalog_product_super_link')],
                 ['link_id', 'product_id']
             )->join(
                 ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
-                'e.' . $metadata->getLinkField() . ' = link_table.parent_id',
+                'e.' . $linkField . ' = link_table.parent_id',
                 ['e.entity_id']
             )->where(
                 'link_table.product_id IN(?)',
@@ -60,6 +61,7 @@ class Product extends AbstractDb
             );
 
         $result = $connection->fetchAll($select);
+       
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['entity_id'];
         }
@@ -80,13 +82,14 @@ class Product extends AbstractDb
 
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
+        $linkField = htmlspecialchars($metadata->getLinkField());
         $select = $connection->select()
             ->from(
                 ['link_table' => $connection->getTableName('catalog_product_bundle_selection')],
                 ['selection_id', 'product_id']
             )->join(
                 ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
-                'e.' . $metadata->getLinkField() . ' = link_table.parent_product_id',
+                'e.' . $linkField . ' = link_table.parent_product_id',
                 ['e.entity_id']
             )->where(
                 'link_table.product_id IN(?)',
@@ -96,6 +99,7 @@ class Product extends AbstractDb
             );
 
         $result = $connection->fetchAll($select);
+
         foreach ($result as $_row) {
             $childToParentIds[$_row['product_id']] = $_row['entity_id'];
         }
@@ -116,13 +120,14 @@ class Product extends AbstractDb
 
         $connection = $this->getConnection();
         $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
+        $linkField = htmlspecialchars($metadata->getLinkField());
         $select = $connection->select()
             ->from(
                 ['link_table' => $connection->getTableName('catalog_product_link')],
                 ['link_id', 'linked_product_id']
             )->join(
                 ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
-                'e.' . $metadata->getLinkField() . ' = link_table.product_id',
+                'e.' . $linkField . ' = link_table.product_id',
                 ['e.entity_id']
             )->where(
                 'link_type_id = ?',
@@ -136,7 +141,7 @@ class Product extends AbstractDb
             );
 
         $result = $connection->fetchAll($select);
-
+       
         foreach ($result as $_row) {
             $childToParentIds[$_row['linked_product_id']] = $_row['entity_id'];
         }

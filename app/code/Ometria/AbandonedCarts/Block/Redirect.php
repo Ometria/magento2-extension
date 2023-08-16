@@ -92,7 +92,7 @@ class Redirect extends Template
         $quote = $this->getQuoteFromSession();
 
         if ($quote !== false && $quote->getStoreId()) {
-            return $this->_storeManager->getStore($quote->getStoreId());
+            return $this->_storeManager->getStore(htmlspecialchars($quote->getStoreId()));
         }
 
         /**
