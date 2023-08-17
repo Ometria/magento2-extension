@@ -44,7 +44,12 @@ class BaseController
             $result = $proceed($request);
         } catch (\Exception $e) {
             $result = $this->resultJsonFactory->create();
-            $result->setData(['error' => $e->getMessage()]);
+            $result->setData(['error' => htmlspecialchars($e->getMessage())]);
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("inside around dispatch");
+            $logger->info($result);
         }
 
         return $result;
