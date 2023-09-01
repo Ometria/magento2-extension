@@ -44,7 +44,7 @@ class BaseController
             $result = $proceed($request);
         } catch (\Exception $e) {
             $result = $this->resultJsonFactory->create();
-            $result->setData(['error' => $e->getMessage()]);
+            $result->setData(['error' => htmlspecialchars($e->getMessage())]);
         }
 
         return $result;
