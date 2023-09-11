@@ -64,8 +64,8 @@ class Coupons extends Base
         $result = $this->resultJsonFactory->create();
         return $result->setData([
             'deleted_coupons' => array_diff($couponCodesToDelete, $coupon_res->getFailedItems(), $coupon_res->getMissingItems()),
-            'missing_coupons' => $coupon_res->getFailedItems(),
-            'failed_coupons' => $coupon_res->getMissingItems()
+            'missing_coupons' => $coupon_res->getMissingItems(),
+            'failed_coupons' => $coupon_res->getFailedItems()
         ]);
     }
 }
