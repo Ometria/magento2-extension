@@ -14,6 +14,7 @@ use Magento\Store\Model\App\Emulation as AppEmulation;
 use Ometria\Api\Helper\Filter\V1\Service as FilterService;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
 use Ometria\Api\Model\ResourceModel\Product as ProductResource;
+use Ometria\Core\Helper\Config;
 
 class Products extends Base
 {
@@ -69,6 +70,9 @@ class Products extends Base
     protected $childParentBundleProductIds = [];
     protected $childParentGroupedProductIds = [];
 
+    /** @var Config */
+    protected $helperConfig;
+
     public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
@@ -91,7 +95,8 @@ class Products extends Base
         StockRegistryInterface $stockRegistry,
         HttpContext $httpContext,
         AppEmulation $appEmulation,
-        ProductResource $productResource
+        ProductResource $productResource,
+        Config $helperConfig
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -116,6 +121,7 @@ class Products extends Base
         $this->httpContext                = $httpContext;
         $this->appEmulation               = $appEmulation;
         $this->productResource            = $productResource;
+        $this->helperConfig               = $helperConfig;
 	}
 
     public function execute()
@@ -286,7 +292,16 @@ class Products extends Base
         if ($productTypeData = $this->getProductTypeData($item)) {
             $tmp['attributes'][] = $productTypeData;
         }
-
+        // Getting Show Logs value 
+        $statusLogValue = $this->helperConfig->getLogConfig();
+        if ($statusLogValue){
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("product details -----------------");
+            $logger->info(print_r($tmp, true));
+            $logger->info("-------------------------------");
+        }
         return $tmp;
 	}
 
@@ -428,7 +443,16 @@ class Products extends Base
 
             $storeListings[$id][$storeId] = $tmp;
         }
-
+        // Getting Show Logs value 
+        $statusLogValue = $this->helperConfig->getLogConfig();
+        if ($statusLogValue){
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("Product store listing details -----------------");
+            $logger->info(print_r($storeListings, true));
+            $logger->info("-------------------------------");
+        }
         return $storeListings;
     }
 

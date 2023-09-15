@@ -34,6 +34,7 @@ use Ometria\Api\Helper\Filter\V2\Service;
 use Ometria\Api\Model\ResourceModel\Product as ProductResource;
 use Ometria\Core\Helper\Product as ProductHelper;
 use Ometria\Core\Service\Product\Inventory as InventoryService;
+use Ometria\Core\Helper\Config;
 
 class Products extends Action
 {
@@ -112,6 +113,9 @@ class Products extends Action
     /** @var array */
     private $storeCurrencies = [];
 
+    /** @var Config */
+    protected $helperConfig;
+
     /**
      * @param Context $context
      * @param ProductCollectionFactory $productCollectionFactory
@@ -130,6 +134,7 @@ class Products extends Action
      * @param InventoryService $inventoryService
      * @param HttpContext $httpContext
      * @param AppEmulation $appEmulation
+     * @param Config $helperConfig
      */
     public function __construct(
         Context $context,
@@ -148,7 +153,8 @@ class Products extends Action
         TaxCalculationInterface $taxCalculationService,
         InventoryService $inventoryService,
         HttpContext $httpContext,
-        AppEmulation $appEmulation
+        AppEmulation $appEmulation,
+        Config $helperConfig
     ) {
         parent::__construct($context);
 
@@ -168,6 +174,7 @@ class Products extends Action
         $this->inventoryService = $inventoryService;
         $this->httpContext = $httpContext;
         $this->appEmulation = $appEmulation;
+        $this->helperConfig = $helperConfig;
     }
 
     /**
@@ -298,6 +305,16 @@ class Products extends Action
             $productData[OmetriaProductInterface::STORE_LISTINGS] = $this->getListings($product);
         }
 
+             // Getting Show Logs value 
+             $statusLogValue = $this->helperConfig->getLogConfig();
+             if ($statusLogValue){
+                 $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
+                 $logger = new \Zend_Log();
+                 $logger->addWriter($writer);
+                 $logger->info("product details -----------------");
+                 $logger->info(print_r($productData, true));
+                 $logger->info("-------------------------------");
+             }
         return $productData;
     }
 
@@ -532,6 +549,16 @@ class Products extends Action
 
             $listings[] = $listing;
         }
+             // Getting Show Logs value 
+             $statusLogValue = $this->helperConfig->getLogConfig();
+             if ($statusLogValue){
+                 $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/order-details.log');
+                 $logger = new \Zend_Log();
+                 $logger->addWriter($writer);
+                 $logger->info("product listings details -----------------");
+                 $logger->info(print_r($listings, true));
+                 $logger->info("-------------------------------");
+             }
 
         return $listings;
     }
