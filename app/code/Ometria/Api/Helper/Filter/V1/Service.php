@@ -9,6 +9,7 @@ class Service
     protected $searchCriteriaBuilder;
     protected $filterBuilder;
     protected $filterGroupBuilder;
+    protected $request;
 
     public function __construct(
         \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,

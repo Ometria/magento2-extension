@@ -13,6 +13,8 @@ use Ometria\Api\Controller\V1\Base;
 class Categories extends Base
 {
     protected $resultJsonFactory;
+    protected $treeFactory;
+
 
     public function __construct(
         Context $context,

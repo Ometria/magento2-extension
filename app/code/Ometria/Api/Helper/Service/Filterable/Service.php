@@ -5,6 +5,7 @@ class Service
 {
     protected $searchCriteria;
     protected $dataObjectProcessor;
+    protected $helperOmetriaApiFilter;
 
     public function __construct(
 		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
