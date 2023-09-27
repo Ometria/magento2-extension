@@ -20,8 +20,11 @@ class Customers extends Base
     /** @var JsonFactory */
     private $resultJsonFactory;
 
+    /** @var FilterableService */
+    private $apiHelperServiceFilterable;
+
     /** @var CustomerRepositoryInterface */
-    private $repository;
+    private $customerRepository;
 
     /** @var CustomerMetadataInterface */
     private $customerMetadataInterface;
