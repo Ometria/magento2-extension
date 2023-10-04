@@ -44,7 +44,6 @@ class BaseController
             $result = $proceed($request);
         } catch (\Exception $e) {
             $result = $this->resultJsonFactory->create();
-            //$result->setData(['error' => htmlspecialchars($e->getMessage())]);
             $result->setData(['error' => get_class($e)." code ".$e->getCode() .
             " in " . basename($e->getFile()) . " line " . $e->getLine() ]);
         }
