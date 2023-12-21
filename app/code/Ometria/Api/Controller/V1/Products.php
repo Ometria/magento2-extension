@@ -240,7 +240,7 @@ class Products extends Base
         $tmp['url']         = $this->getArrayKey($item, 'url');
         $tmp['image_url']   = $this->getArrayKey($item, 'image_url');
         $tmp['attributes']  = [];
-        $tmp['is_active']   = (bool) $this->getArrayKey($item, 'status') == ProductStatus::STATUS_ENABLED;
+        $tmp['is_active']   = (bool) ($this->getArrayKey($item, 'status') == ProductStatus::STATUS_ENABLED);
         $tmp['stores']      = $this->getArrayKey($item, 'store_ids');
         $tmp['parent_id'] = $this->getVariantParentId($item);
         $tmp['is_variant'] = (bool) $tmp['parent_id'] != null ? true : false;
