@@ -60,6 +60,7 @@ class Products extends Base
     */
     protected $needsVisibilityJoin;
     protected $productTypeNames;
+    protected $metadataServiceInterface;
 
     /**
      * Cache of child:parent relationships

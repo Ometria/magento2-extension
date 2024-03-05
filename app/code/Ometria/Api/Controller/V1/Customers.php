@@ -49,6 +49,7 @@ class Customers extends Base
 
     /** @var array */
     private $genderOptions;
+    private $apiHelperServiceFilterable;
 
     public function __construct(
         Context $context,

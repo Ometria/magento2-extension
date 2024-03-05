@@ -46,6 +46,9 @@ class Orders extends Base
     /** @var Config */
     protected $helperConfig;
 
+    /** @var OrderRepositoryInterface */
+    protected $orderRepository;
+
     /**
      * @param Context $context
      * @param JsonFactory $resultJsonFactory
