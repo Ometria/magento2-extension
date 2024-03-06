@@ -8,14 +8,13 @@ class Service
     protected $helperOmetriaApiFilter;
 
     public function __construct(
-		\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
-		\Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,
-		\Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor
-    )
-    {
-		$this->searchCriteria         = $searchCriteria;
-		$this->helperOmetriaApiFilter = $helperOmetriaApiFilter;
-		$this->dataObjectProcessor    = $dataObjectProcessor;
+        \Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
+        \Ometria\Api\Helper\Filter\V1\Service $helperOmetriaApiFilter,
+        \Magento\Framework\Reflection\DataObjectProcessor $dataObjectProcessor
+    ) {
+        $this->searchCriteria         = $searchCriteria;
+        $this->helperOmetriaApiFilter = $helperOmetriaApiFilter;
+        $this->dataObjectProcessor    = $dataObjectProcessor;
     }
 
     /**

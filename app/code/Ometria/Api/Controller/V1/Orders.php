@@ -48,6 +48,7 @@ class Orders extends Base
 
     /** @var OrderRepositoryInterface */
     protected $orderRepository;
+    protected $context;
 
     /**
      * @param Context $context

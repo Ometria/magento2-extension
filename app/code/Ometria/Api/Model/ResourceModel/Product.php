@@ -10,6 +10,7 @@ class Product extends AbstractDb
 {
     /** @var MetadataPool */
     private $metadataPool;
+    protected $context;
 
     /**
      * @param Context $context

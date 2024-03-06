@@ -7,6 +7,7 @@ class Stores extends Base
     protected $resultJsonFactory;
     protected $storeFactory;
     protected $scopeConfig;
+    protected $context;
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,

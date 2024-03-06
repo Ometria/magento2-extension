@@ -14,6 +14,7 @@ class Categories extends Base
 {
     protected $resultJsonFactory;
     protected $treeFactory;
+    protected $context;
 
     public function __construct(
         Context $context,

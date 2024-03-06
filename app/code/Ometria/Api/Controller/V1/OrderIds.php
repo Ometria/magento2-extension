@@ -34,6 +34,7 @@ class OrderIds extends Base
 
     /** @var JsonFactory */
     private $resultJsonFactory;
+    protected $context;
 
     /**
      * @param Context $context

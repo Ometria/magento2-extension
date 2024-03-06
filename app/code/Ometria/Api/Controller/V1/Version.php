@@ -7,6 +7,7 @@ class Version extends Base
 {
     protected $resultJsonFactory;
     protected $moduleResource;
+    protected $context;
     const VERSION_STRING = 'Ometria_Magento2_Extension';
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,

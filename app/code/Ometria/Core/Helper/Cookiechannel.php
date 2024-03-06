@@ -20,6 +20,7 @@ class Cookiechannel extends AbstractHelper
 
     /** @var bool */
     private $cookieDidChange = false;
+    protected $context;
 
     /**
      * @param Context $context

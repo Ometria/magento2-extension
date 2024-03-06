@@ -21,6 +21,7 @@ class Product extends AbstractHelper
 
     /** @var SearchCriteriaBuilder */
     private $searchCriteriaBuilder;
+    protected $context;
 
     /**
      * @param Context $context

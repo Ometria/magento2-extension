@@ -46,6 +46,8 @@ class Head extends Template
     private $salesModelOrder;
     private $query;
     private $inventoryService;
+    private $coreHelperProduct;
+    private $salesModelOrderFactory;
 
     /**
      * @param Context $context
