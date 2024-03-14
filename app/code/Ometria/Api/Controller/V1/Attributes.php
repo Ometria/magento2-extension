@@ -6,7 +6,8 @@ class Attributes extends Base
 {
     protected $resultJsonFactory;
     protected $attributes;
-    
+    protected $context;
+
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,

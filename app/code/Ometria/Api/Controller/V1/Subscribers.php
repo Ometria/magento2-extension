@@ -11,6 +11,7 @@ class Subscribers extends Base
     protected $searchCriteria;
     protected $customerCollection;
     protected $customerDataHelper;
+    protected $context;
     
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,

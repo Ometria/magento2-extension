@@ -7,6 +7,9 @@ class Product extends \Ometria\Api\Helper\Service\Filterable\Service
 {
     protected $urlModel;
     protected $storeUrlHelper;
+    protected $dataObjectProcessor;
+    protected $helperOmetriaApiFilter;
+    protected $searchCriteria;
 
     /** @var ProductHelper */
     private $productHelper;

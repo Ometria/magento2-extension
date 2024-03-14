@@ -13,6 +13,7 @@ class Types extends Base
 {
     protected $resultJsonFactory;
     protected $attributeCollectionFactory;
+    protected $context;
 
     public function __construct(
         Context $context,

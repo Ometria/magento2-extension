@@ -11,6 +11,7 @@ class Config extends AbstractHelper
     /** @var MageConfig */
     private $coreHelperMageConfig;
     protected $logger;
+    protected $context;
 
     public function __construct(
         Context $context,

@@ -13,6 +13,7 @@ class Cart
     protected $helperPing;
     protected $helperSession;
     protected $helperConfig;
+    protected $productFactory;
 
     public function __construct(
         \Ometria\Core\Helper\Product $helperProduct,

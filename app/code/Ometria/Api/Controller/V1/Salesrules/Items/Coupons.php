@@ -6,6 +6,8 @@ class Coupons extends Base
 {
     protected $resultJsonFactory;
     protected $couponRepository;
+    protected $context;
+    protected $apiHelperServiceFilterable;
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\SalesRule\Model\CouponRepository $couponRepository,		
