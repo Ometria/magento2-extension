@@ -258,8 +258,16 @@ class Products extends Base
             $tmp['store_listings'] = $item['store_listings'];
         }
 
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/product-details.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("ProductData -----------------");
+        $logger->info(print_r($item, true));
+        $logger->info("-------------------------------");
+
         //add attributes
         $attributes = $this->getArrayKey($item, 'custom_attributes');
+        $logger->info(print_r($attributes, true));
         $attributes = $attributes ? $attributes : [];
         foreach ($attributes as $attribute) {
             $fullAttribute = $this->attributesFactory->create()
@@ -277,6 +285,8 @@ class Products extends Base
             ];
         }
 
+        $logger->info(print_r($tmp['attributes'], true));
+        $logger->info("--------------ENdddddddddddddddddddddddd-----------------");
         $categoriesAsAttributes = $this->helperCategory->getOmetriaAttributeFromCategoryIds(
             $this->getArrayKey($item, 'category_ids')
         );
