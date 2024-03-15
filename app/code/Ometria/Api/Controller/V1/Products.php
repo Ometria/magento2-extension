@@ -60,6 +60,7 @@ class Products extends Base
     */
     protected $needsVisibilityJoin;
     protected $productTypeNames;
+    protected $metadataServiceInterface;
 
     /**
      * Cache of child:parent relationships
@@ -68,6 +69,7 @@ class Products extends Base
     protected $childParentConfigurableProductIds = [];
     protected $childParentBundleProductIds = [];
     protected $childParentGroupedProductIds = [];
+    protected $context;
 
     public function __construct(
 		\Magento\Framework\App\Action\Context $context,

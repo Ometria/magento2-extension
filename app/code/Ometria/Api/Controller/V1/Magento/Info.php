@@ -13,6 +13,7 @@ class Info extends Base
     protected $scopeConfig;
     protected $app;
     protected $helperMetadata;
+    protected $context;
 
     public function __construct(
         \Magento\Framework\App\Action\Context $context,

@@ -7,6 +7,8 @@ class Settings extends Base
     protected $resultJsonFactory;    
     protected $helperConfig;
     protected $resourceConfig;
+    protected $cacheTypeList;
+    protected $context;
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,

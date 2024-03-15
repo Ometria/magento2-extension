@@ -15,6 +15,7 @@ class Product {
     protected $helperPing;
     protected $helperProduct;
     protected $helperRequest;
+    protected $request;
 
     /** @var ConfigurableType */
     private $configurableType;

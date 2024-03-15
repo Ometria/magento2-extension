@@ -11,6 +11,7 @@ class Ping extends AbstractHelper
     const API_SOCKET_TIMEOUT = 2;
 
     protected $helperConfig;
+    protected $context;
     public function __construct(
         Context $context,
         \Ometria\Core\Helper\Config $helperConfig       

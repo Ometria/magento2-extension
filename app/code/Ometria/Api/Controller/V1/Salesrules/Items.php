@@ -7,7 +7,8 @@ class Items extends Base
     protected $resultJsonFactory;
     protected $ruleRepository;
     protected $apiHelperServiceFilterable;
-    
+    protected $context;
+
 	public function __construct(
 		\Magento\Framework\App\Action\Context $context,
 		\Magento\Framework\Controller\Result\JsonFactory $resultJsonFactory,
