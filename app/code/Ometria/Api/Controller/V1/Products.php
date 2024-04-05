@@ -278,10 +278,12 @@ class Products extends Base
             $type = $inputType == 'multiselect' ? '&' . $attribute['attribute_code'] : $attribute['attribute_code'];
             $valueIdx = in_array($inputType, ['select', 'multiselect']) ? 'id' : 'value';
 
+	    $logger->info("attribute ids++++++++++++++++++");
+	    $logger->info($fullAttribute->getId());
             $tmp['attributes'][] = [
-                'type'    => $type,
-                $valueIdx => $attribute['value'],
-                'label'   => $fullAttribute->getFrontendLabel()
+                'type'  => $type,
+                'id'    => $fullAttribute->getId(),
+                'label' => $attribute['value']
             ];
         }
 
