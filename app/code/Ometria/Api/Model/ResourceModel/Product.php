@@ -61,6 +61,13 @@ class Product extends AbstractDb
                 'link_id ASC'
             );
 
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("ProductData -----------------");
+        $logger->info(print_r($select, true));
+        $logger->info("-------------------------------");
+
         $result = $connection->fetchAll($select);
        
         foreach ($result as $_row) {
@@ -99,6 +106,12 @@ class Product extends AbstractDb
                 'selection_id ASC'
             );
 
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("ProductData -----------------");
+        $logger->info(print_r($select, true));
+        $logger->info("-------------------------------");
         $result = $connection->fetchAll($select);
 
         foreach ($result as $_row) {
@@ -141,6 +154,12 @@ class Product extends AbstractDb
                 'link_id ASC'
             );
 
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/custom.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info("ProductData -----------------");
+        $logger->info(print_r($select, true));
+        $logger->info("-------------------------------");
         $result = $connection->fetchAll($select);
        
         foreach ($result as $_row) {
