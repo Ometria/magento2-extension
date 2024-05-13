@@ -2,6 +2,7 @@
 namespace Ometria\Api\Controller\V1;
 
 use Magento\CatalogInventory\Api\StockRegistryInterface;
+use Magento\Framework\EntityManager\MetadataPool;
 use Magento\Framework\Exception\LocalizedException;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
 use Ometria\Api\Controller\V1\Base;
@@ -34,6 +35,8 @@ class Products extends Base
 
     /** @var StockRegistryInterface */
     private $stockRegistry;
+    /** @var MetadataPool */
+    private $metadataPool;
 
     protected $storeIdCache=false;
     protected $productTypeFactory;
@@ -72,6 +75,7 @@ class Products extends Base
         \Magento\Directory\Helper\Data $directoryHelper,
         \Ometria\Api\Helper\StoreUrl $storeUrlHelper,
         \Magento\Catalog\Model\Product\TypeFactory $productTypeFactory,
+        \Magento\Framework\EntityManager\MetadataPool\MetadataPool $metadataPool,
         StockRegistryInterface $stockRegistry
 	) {
 		parent::__construct($context);
@@ -95,6 +99,7 @@ class Products extends Base
 		$this->storeUrlHelper             = $storeUrlHelper;
         $this->productTypeFactory         = $productTypeFactory;
         $this->stockRegistry              = $stockRegistry;
+        $this->metadataPool               = $metadataPool;
 	}
 
 	protected function getArrayKey($array, $key)
@@ -549,22 +554,28 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+        $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
+        $linkField = htmlspecialchars($metadata->getLinkField());
+
         $select = $connection->select()
             ->from(
-                $this->resourceConnection->getTableName('catalog_product_super_link'),
-                ['product_id', 'parent_id']
-            )
-            ->where(
-                'product_id IN (?)',
+                ['link_table' => $connection->getTableName('catalog_product_super_link')],
+                ['link_id', 'product_id']
+            )->join(
+                ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
+                'e.' . $linkField . ' = link_table.parent_id',
+                ['e.entity_id']
+            )->where(
+                'link_table.product_id IN(?)',
                 $childIds
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
-            ->order('link_id ASC');
+            ->order(
+                'link_id ASC'
+            );
         
         $result = $connection->fetchAll($select);
         foreach ($result as $_row) {
-            $childToParentIds[$_row['product_id']] = $_row['parent_id'];
+            $childToParentIds[$_row['product_id']] = $_row['entity_id'];
         }
 
         return $childToParentIds;
@@ -582,22 +593,27 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+        $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
+        $linkField = htmlspecialchars($metadata->getLinkField());
         $select = $connection->select()
             ->from(
-                $this->resourceConnection->getTableName('catalog_product_bundle_selection'),
-                ['parent_product_id', 'product_id']
-            )
-            ->where(
-                'product_id IN (?)',
+                ['link_table' => $connection->getTableName('catalog_product_bundle_selection')],
+                ['selection_id', 'product_id']
+            )->join(
+                ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
+                'e.' . $linkField . ' = link_table.parent_product_id',
+                ['e.entity_id']
+            )->where(
+                'link_table.product_id IN(?)',
                 $childIds
-            )
-            // order by the oldest selections first so the iterator will end with the most recent link 
-            ->order('selection_id ASC');
+            )->order(
+                'selection_id ASC'
+            );
 
         $result = $connection->fetchAll($select);
+
         foreach ($result as $_row) {
-            $childToParentIds[$_row['product_id']] = $_row['parent_product_id'];
+            $childToParentIds[$_row['product_id']] = $_row['entity_id'];
         }
 
         return $childToParentIds;
@@ -615,26 +631,31 @@ class Products extends Base
         $childToParentIds = [];
 
         $connection = $this->resourceConnection->getConnection();
-        
+        $metadata = $this->metadataPool->getMetadata(ProductInterface::class);
+        $linkField = htmlspecialchars($metadata->getLinkField());
         $select = $connection->select()
             ->from(
-                $this->resourceConnection->getTableName('catalog_product_link'),
-                ['product_id', 'linked_product_id']
-            )
-            ->where(
-                'linked_product_id IN (?)',
-                $childIds
-            )
-            ->where(
+                ['link_table' => $connection->getTableName('catalog_product_link')],
+                ['link_id', 'linked_product_id']
+            )->join(
+                ['e' => $this->metadataPool->getMetadata(ProductInterface::class)->getEntityTable()],
+                'e.' . $linkField . ' = link_table.product_id',
+                ['e.entity_id']
+            )->where(
                 'link_type_id = ?',
                 \Magento\GroupedProduct\Model\ResourceModel\Product\Link::LINK_TYPE_GROUPED
             )
-            // order by the oldest links first so the iterator will end with the most recent link 
-            ->order('link_id ASC');
+            ->where(
+                'link_table.linked_product_id IN(?)',
+                $childIds
+            )->order(
+                'link_id ASC'
+            );
 
         $result = $connection->fetchAll($select);
+
         foreach ($result as $_row) {
-            $childToParentIds[$_row['linked_product_id']] = $_row['product_id'];
+            $childToParentIds[$_row['linked_product_id']] = $_row['entity_id'];
         }
 
         return $childToParentIds;
