@@ -1,6 +1,7 @@
 <?php
 namespace Ometria\Api\Controller\V1;
 
+use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\CatalogInventory\Api\StockRegistryInterface;
 use Magento\Framework\EntityManager\MetadataPool;
 use Magento\Framework\Exception\LocalizedException;
