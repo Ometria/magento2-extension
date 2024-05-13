@@ -75,7 +75,7 @@ class Products extends Base
         \Magento\Directory\Helper\Data $directoryHelper,
         \Ometria\Api\Helper\StoreUrl $storeUrlHelper,
         \Magento\Catalog\Model\Product\TypeFactory $productTypeFactory,
-        \Magento\Framework\EntityManager\MetadataPool\MetadataPool $metadataPool,
+        \Magento\Framework\EntityManager\MetadataPool $metadataPool,
         StockRegistryInterface $stockRegistry
 	) {
 		parent::__construct($context);
