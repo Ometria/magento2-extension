@@ -30,18 +30,11 @@ class Attributes extends Base
     
     protected function serializeAttribute($attribute)
     {
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/attr-details.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info("AtrrData -----------------");
-
         $options        = $attribute->getOptions();
         $options        = array_map(function($item){
             return $item->getData();
         }, $options);
 
-        $logger->info(print_r($options, true));
-        $logger->info("-------------------------------");
         $options        = array_filter($options, function($item){
             return $item['value'];
         });
@@ -56,9 +49,6 @@ class Attributes extends Base
             $options[$key]['id']      = $options[$key]['value'];
             $options[$key]['title']   = $options[$key]['label'];
             
-            $logger->info(print_r($options, true));
-            $logger->info("-------------------------------");
-
             unset($options[$key]['value']);
             unset($options[$key]['label']);
 //             unset($options['value']);
