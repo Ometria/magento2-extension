@@ -271,9 +271,9 @@ class Products extends Base
             $valueIdx = in_array($inputType, ['select', 'multiselect']) ? 'id' : 'value';
 
             $tmp['attributes'][] = [
-                'type'    => $type,
-                $valueIdx => $attribute['value'],
-                'label'   => $fullAttribute->getFrontendLabel()
+                'type'  => $type,
+                'id'    => $fullAttribute->getId(),
+                'label' => $attribute['value']
             ];
         }
 
