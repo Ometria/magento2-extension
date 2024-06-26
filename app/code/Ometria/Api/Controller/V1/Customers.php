@@ -129,6 +129,13 @@ class Customers extends Base
 
             $new = Helper::getBlankArray();
 
+            $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/customer-details.log');
+            $logger = new \Zend_Log();
+            $logger->addWriter($writer);
+            $logger->info("Customer details -----------------");
+            $logger->info(print_r($item, true));
+            $logger->info("-------------------------------");
+
             $new["@type"] = "contact";
             $new["id"] = array_key_exists('id', $item) ? $item['id'] : '';
             $new["email"] = array_key_exists('email', $item) ? $item['email'] : '';
@@ -142,6 +149,8 @@ class Customers extends Base
             $new["country_id"] = $this->customerDataHelper->getCountryId($item);
             $new["store_id"] = array_key_exists('store_id', $item) ? $item['store_id'] : null;
 
+            $logger->info(print_r($new, true));
+            $logger->info("-------------------------------");
             if ($this->_request->getParam('raw') != null) {
                 $new['_raw'] = $item;
 
