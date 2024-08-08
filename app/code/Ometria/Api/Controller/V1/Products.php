@@ -272,8 +272,8 @@ class Products extends Base
 
             $tmp['attributes'][] = [
                 'type'  => $type,
-                'id'    => $fullAttribute->getId(),
-                'label' => $attribute['value']
+                $valueIdx => $attribute['value'],
+                'label'   => $fullAttribute->getFrontendLabel()
             ];
         }
 
