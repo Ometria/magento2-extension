@@ -485,8 +485,17 @@ class Products extends Base
      */
     private function appendStock($productId, $item)
     {
-        $websiteId = $this->storeManager->getWebsite()->getId();
-        $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
+        $product = $this->productRepository->getById($productId);
+        $storeIds = $product->getStoreIds();
+        if (empty($storeIds)) {
+            $websiteId = $this->storeManager->getWebsite()->getId();
+            $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
+        } else {
+            $storeId = $storeIds[0];
+            $store = $this->storeManager->getStore($storeId);
+            $websiteId = $store->getWebsiteId();
+            $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
+        }
 
         if (isset($stockItem['is_in_stock'])) {
             $item['is_in_stock'] = $stockItem['is_in_stock'];
