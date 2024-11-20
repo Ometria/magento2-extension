@@ -95,6 +95,10 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment><![CDATA[If Yes, this allows for the select of a field to show logs on order details.]]></comment>
                 </field>
+                <field id="stock_store_ids" translate="label" type="textarea" sortOrder="130" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Import Product Stock Status From These Store Ids</label>
+                    <comment>Enter values separated by new lines. Enter * to check all the stores</comment>
+                </field>
 			</group>
 		</section>
 	</system>

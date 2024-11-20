@@ -14,6 +14,8 @@ use Magento\Store\Model\App\Emulation as AppEmulation;
 use Ometria\Api\Helper\Filter\V1\Service as FilterService;
 use Ometria\Api\Helper\Format\V1\Products as Helper;
 use Ometria\Api\Model\ResourceModel\Product as ProductResource;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Store\Model\ScopeInterface;
 
 class Products extends Base
 {
@@ -39,6 +41,8 @@ class Products extends Base
     protected $request;
     protected $directoryHelper;
     protected $storeUrlHelper;
+
+    protected $scopeConfig;
 
     /** @var StockRegistryInterface */
     private $stockRegistry;
@@ -93,7 +97,8 @@ class Products extends Base
         StockRegistryInterface $stockRegistry,
         HttpContext $httpContext,
         AppEmulation $appEmulation,
-        ProductResource $productResource
+        ProductResource $productResource,
+        ScopeConfigInterface $scopeConfig
 	) {
 		parent::__construct($context);
 		$this->searchCriteriaBuilder      = $searchCriteriaBuilder;
@@ -118,6 +123,7 @@ class Products extends Base
         $this->httpContext                = $httpContext;
         $this->appEmulation               = $appEmulation;
         $this->productResource            = $productResource;
+        $this->scopeConfig = $scopeConfig;
 	}
 
     public function execute()
@@ -485,8 +491,26 @@ class Products extends Base
      */
     private function appendStock($productId, $item)
     {
-        $websiteId = $this->storeManager->getWebsite()->getId();
-        $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
+        $storeIds = $this->getStoreIdsForStock();
+        if (empty($storeIds)) {
+            $websiteId = $this->storeManager->getWebsite()->getId();
+            $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
+        } else {
+            if (count($storeIds) === 1 && $storeIds[0] === '*') {
+                $product = $this->productRepository->getById($productId);
+                $productStoreIds = $product->getStoreIds();
+            } else {
+                $productStoreIds = $storeIds;
+            }
+            foreach($productStoreIds as $key => $storeId) {
+                $store = $this->storeManager->getStore($storeId);
+                $websiteId = $store->getWebsiteId();
+                $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
+                if (isset($stockItem['is_in_stock']) && ($stockItem['is_in_stock'] == 1)){
+                    break;
+                }
+            }
+        }
 
         if (isset($stockItem['is_in_stock'])) {
             $item['is_in_stock'] = $stockItem['is_in_stock'];
@@ -497,6 +521,15 @@ class Products extends Base
         }
 
         return $item;
+    }
+
+    private function getStoreIdsForStock(){
+        $configStoreIds = $this->scopeConfig->getValue('ometria/advanced/stock_store_ids', ScopeInterface::SCOPE_STORE);
+        if (empty($configStoreIds)) {
+            return [];
+        }
+        $storeIds = array_filter(array_map('trim', explode(PHP_EOL, $configStoreIds)));
+        return $storeIds;
     }
 
     protected function getProductPrice(
