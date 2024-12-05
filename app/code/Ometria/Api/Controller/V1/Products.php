@@ -506,6 +506,9 @@ class Products extends Base
                 $websiteId = $store->getWebsiteId();
                 $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
                 $stockStatus = $this->stockRegistry->getProductStockStatus($productId, $websiteId);
+                if ($stockStatus == 1){
+                    break;
+                }
             }
             $item['is_in_stock'] = $stockStatus;
         }
