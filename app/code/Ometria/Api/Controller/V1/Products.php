@@ -491,29 +491,26 @@ class Products extends Base
      */
     private function appendStock($productId, $item)
     {
+        $stockStatus = 0;
         $storeIds = $this->getStoreIdsForStock();
-        if (empty($storeIds)) {
+        if (empty($storeIds) || (count($storeIds) === 1 && $storeIds[0] === '*')) {
             $websiteId = $this->storeManager->getWebsite()->getId();
             $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
-        } else {
-            if (count($storeIds) === 1 && $storeIds[0] === '*') {
-                $product = $this->productRepository->getById($productId);
-                $productStoreIds = $product->getStoreIds();
-            } else {
-                $productStoreIds = $storeIds;
+            if (isset($stockItem['is_in_stock'])) {
+                $item['is_in_stock'] = $stockItem['is_in_stock'];
             }
+        } else {
+            $productStoreIds = $storeIds;
             foreach($productStoreIds as $key => $storeId) {
                 $store = $this->storeManager->getStore($storeId);
                 $websiteId = $store->getWebsiteId();
                 $stockItem = $this->stockRegistry->getStockItem($productId, $websiteId);
-                if (isset($stockItem['is_in_stock']) && ($stockItem['is_in_stock'] == 1)){
+                $stockStatus = $this->stockRegistry->getProductStockStatus($productId, $websiteId);
+                if ($stockStatus == 1){
                     break;
                 }
             }
-        }
-
-        if (isset($stockItem['is_in_stock'])) {
-            $item['is_in_stock'] = $stockItem['is_in_stock'];
+            $item['is_in_stock'] = $stockStatus;
         }
 
         if (isset($stockItem['qty'])) {
