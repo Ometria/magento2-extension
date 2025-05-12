@@ -27,6 +27,7 @@ class Newsletter
         $data = $subscriber->getData();
 
         $original_data = $subscriber->getOrigData();
+        $status_change = false;
         if (!$original_data) {
             $status_change = true;
         } elseif (isset($original_data['subscriber_status'])) {
