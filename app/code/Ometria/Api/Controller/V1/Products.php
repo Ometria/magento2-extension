@@ -324,9 +324,16 @@ class Products extends Base
         $fields = [];
         foreach ($filterGroup->getFilters() as $filter) {
             if ($filter->getField() === 'store_id') {
-                foreach ($filter->getValue() as $store_id) {
-                    $store = $this->storeManager->getStore($store_id);
-                    $collection->addStoreFilter($store);
+                $storeIds = $filter->getValue();
+                if (is_array($storeIds) && !empty($storeIds)) {
+                    foreach ($storeIds as $store_id) {
+                        try {
+                            $store = $this->storeManager->getStore($store_id);
+                            $collection->addStoreFilter($store);
+                        } catch (\Exception $e) {
+                            continue;
+                        }
+                    }
                 }
                 continue;
             }
