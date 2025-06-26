@@ -326,13 +326,18 @@ class Products extends Base
             if ($filter->getField() === 'store_id') {
                 $storeIds = $filter->getValue();
                 if (is_array($storeIds) && !empty($storeIds)) {
-                    foreach ($storeIds as $store_id) {
+                    $validWebsiteIds = [];
+                    foreach ($storeIds as $storeId) {
                         try {
-                            $store = $this->storeManager->getStore($store_id);
-                            $collection->addStoreFilter($store);
+                            $store = $this->storeManager->getStore($storeId);
+                            $websiteId = $store->getWebsiteId();
+                            $validWebsiteIds[] = (int)$websiteId;
                         } catch (\Exception $e) {
                             continue;
                         }
+                    }
+                    if (!empty($validWebsiteIds)) {
+                        $collection->addWebsiteFilter(array_unique($validWebsiteIds));
                     }
                 }
                 continue;
