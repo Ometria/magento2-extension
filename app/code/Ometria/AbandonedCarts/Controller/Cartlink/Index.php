@@ -71,7 +71,7 @@ class Index extends \Magento\Framework\App\Action\Action
 
             if ($helper->shouldCheckDeeplinkgToken())
             {
-                $computed_token = substr(md5($quote->getCreatedAt().$quote->getId()), 0, 12);
+                $computed_token = substr(hash('sha256', $quote->getCreatedAt().$quote->getId()), 0, 12);
                 if ($token!=$computed_token)
                 {
                     $this->messageManager->addNotice(self::CART_LINK_TOKEN_INVALID);
