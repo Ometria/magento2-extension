@@ -66,7 +66,7 @@ class Cart
             $cart = $cart->load($cart->getId());
         }
 
-        $cart_token = substr(md5($cart->getCreatedAt().$cart->getId()),0,12);
+        $cart_token = substr(hash('sha256', $cart->getCreatedAt().$cart->getId()),0,12);
 
         $command = array(
                 'basket',
