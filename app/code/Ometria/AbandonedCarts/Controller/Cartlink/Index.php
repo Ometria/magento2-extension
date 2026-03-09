@@ -3,8 +3,8 @@ namespace Ometria\AbandonedCarts\Controller\Cartlink;
 
 class Index extends \Magento\Framework\App\Action\Action
 {
-    const CART_LINK_QUOTE_INVALID = 'Cart link is incorrect or expired';
-    const CART_LINK_TOKEN_INVALID = 'Deeplink is incorrect or expired';
+    const CART_LINK_QUOTE_INVALID     = 'Cart link is incorrect or expired';
+    const CART_LINK_TOKEN_INVALID     = 'Deeplink is incorrect or expired';
 
     protected $customerModelSession;
     protected $abandonedCartsHelperConfig;
@@ -14,6 +14,9 @@ class Index extends \Magento\Framework\App\Action\Action
     protected $checkoutSession;
     protected $session;
     protected $cookieHelper;
+    protected $visitor;
+    protected $cart;
+
 
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
@@ -81,12 +84,38 @@ class Index extends \Magento\Framework\App\Action\Action
                 }
             }
 
+            $customerId = $quote->getCustomerId();
+
+            if ($customerId) {
+                if (!$this->customerModelSession->isLoggedIn()) {
+                    $returnUrl = $this->_url->getUrl(
+                        'omcart/cartlink/index',
+                        ['id' => $id, 'token' => $token]
+                    );
+                    $this->customerModelSession->setBeforeAuthUrl($returnUrl);
+
+                    return $this->resultFactory->create(
+                        \Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT
+                    )->setUrl($this->_url->getUrl('customer/account/login'));
+                }
+
+                if ((int)$customerId !== (int)$this->customerModelSession->getCustomerId()) {
+                    $this->messageManager->addNotice(self::CART_LINK_QUOTE_INVALID);
+                    return $this->resultFactory->create(
+                        \Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT
+                    )->setUrl('/');
+                }
+            }
+
             $this->checkoutSession->setQuoteId($quote->getId());
             $data = $this->session->getVisitorData();
             $data['quote_id'] = $quote->getId();
             $data['last_visit_at'] = $data['last_visit_at'] ?? (new \DateTime())->format(\Magento\Framework\Stdlib\DateTime::DATETIME_PHP_FORMAT);
             $this->session->setVisitorData($data);
-            $this->visitor->setData($data)->save();
+
+            if (!$customerId) {
+                $this->visitor->setData($data)->save();
+            }
 
             return $this->resultFactory->create(
                 \Magento\Framework\Controller\ResultFactory::TYPE_PAGE
