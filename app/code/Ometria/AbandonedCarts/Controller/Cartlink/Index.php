@@ -14,6 +14,9 @@ class Index extends \Magento\Framework\App\Action\Action
     protected $checkoutSession;
     protected $session;
     protected $cookieHelper;
+    protected $visitor;
+    protected $cart;
+
 
     public function __construct(
         \Magento\Framework\App\Action\Context $context,
