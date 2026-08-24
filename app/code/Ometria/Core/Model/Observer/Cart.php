@@ -40,10 +40,8 @@ class Cart
         $this->helperSession        = $helperSession;
         $this->helperConfig         = $helperConfig;
 
-        // Appended as optional and resolved lazily on purpose. Cart\BasketUpdated and
-        // Cart\OrderPlaced are constructor-less subclasses that inherit this signature, so a
-        // merchant deploying with a stale generated/ and no setup:di:compile would otherwise
-        // hit an ArgumentCountError on the ORDER PLACEMENT path.
+        // Optional and lazily resolved so subclasses that inherit this constructor keep
+        // working against a stale generated/ directory.
         $this->helperCartToken      = $helperCartToken
             ?: \Magento\Framework\App\ObjectManager::getInstance()->get(CartToken::class);
     }
@@ -76,16 +74,11 @@ class Cart
             $cart = $cart->load($cart->getId());
         }
 
-        // Per quote random token, generated once on first cart save and stored on the quote
-        // row. Must stay after the reload above: Quote::load() resets _data and would
-        // silently discard the setData() below.
+        // Must stay after the reload above, which resets the model's data.
         $cart_token = $this->helperCartToken->getOrCreate($cart->getId());
 
         if ($cart_token !== '') {
-            // Keep the in memory quote in step with the row we just wrote. AbstractDb
-            // includes any field where hasData() is true, so a quote loaded before our write
-            // still holds NULL here and a later $quote->save() in this request would write
-            // that NULL straight back over the token.
+            // Keep the in memory quote in step with the row that was just written.
             $cart->setData(CartToken::COLUMN, $cart_token);
         }
 

@@ -4,22 +4,14 @@
     <!--
         Adds the Ometria abandoned cart deeplink token to Magento's quote table.
 
-        Owned by Ometria_Core because Core is the module that WRITES the value
-        (Model/Observer/Cart.php). A missing column on the write path is fatal on every
-        add to cart, whereas on the read path it is benign, so the schema must live with
-        the producer. Declarative schema is also only applied for enabled modules: if this
-        lived in Ometria_AbandonedCarts, disabling that module would DROP the column while
-        Core kept writing to it.
+        Declared in Ometria_Core, the module that writes the value.
 
         resource="checkout" must match Magento's own declaration of this table in
-        Magento_Quote/etc/db_schema.xml, and is what keeps split database installs
-        pointing at the right connection.
+        Magento_Quote/etc/db_schema.xml, and keeps split database installs pointing at
+        the right connection.
 
-        Deliberately no index and no uniqueness: the deeplink looks a quote up by
-        entity_id and then compares that quote's own token in PHP via hash_equals().
-        The token is never a lookup key, so a collision is harmless. A SQL equality
-        lookup would also be case insensitive under utf8mb4_general_ci, which would
-        roughly halve the effective entropy.
+        No index and no uniqueness constraint: the column is only ever read for a quote
+        already located by entity_id, never used as a lookup key.
     -->
     <table name="quote" resource="checkout" comment="Sales Flat Quote">
         <column xsi:type="varchar" name="ometria_cart_token" nullable="true" length="64"

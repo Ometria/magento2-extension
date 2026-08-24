@@ -45,8 +45,8 @@ class Index extends \Magento\Framework\App\Action\Action
         $this->cart                             = $cart;
         $this->cookieHelper                     = $cookieHelper;
 
-        // Optional + lazily resolved so a stale generated/ cannot turn a missing DI argument
-        // into a fatal on this route.
+        // Optional and lazily resolved so this route keeps working against a stale
+        // generated/ directory.
         $this->cartTokenHelper                  = $cartTokenHelper
             ?: \Magento\Framework\App\ObjectManager::getInstance()->get(CartToken::class);
 
@@ -65,7 +65,7 @@ class Index extends \Magento\Framework\App\Action\Action
                 )->setUrl('/');
         }
 
-        // ?token[]=x arrives as an array, which would be a TypeError inside hash_equals().
+        // Normalise both params before use; either may arrive as a non scalar.
         $token = $this->getRequest()->getParam('token');
         $token = is_string($token) ? $token : '';
         $id    = (int)$this->getRequest()->getParam('id');
@@ -85,8 +85,7 @@ class Index extends \Magento\Framework\App\Action\Action
 
             if ($helper->shouldCheckDeeplinkgToken())
             {
-                // Compares against the token stored on the quote row. Nothing is recomputed,
-                // so nothing can drift, and a quote with no token provisioned fails closed.
+                // Compared against the token stored on the quote row.
                 if (!$this->cartTokenHelper->isValid($quote->getData(CartToken::COLUMN), $token))
                 {
                     $this->messageManager->addNotice(self::CART_LINK_TOKEN_INVALID);
