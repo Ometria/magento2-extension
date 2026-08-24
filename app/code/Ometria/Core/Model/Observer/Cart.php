@@ -2,6 +2,7 @@
 
 namespace Ometria\Core\Model\Observer;
 use Magento\Framework\Event\Observer;
+use Ometria\Core\Helper\CartToken;
 
 class Cart
 {
@@ -14,6 +15,7 @@ class Cart
     protected $helperSession;
     protected $helperConfig;
     protected $productFactory;
+    protected $helperCartToken;
 
     public function __construct(
         \Ometria\Core\Helper\Product $helperProduct,
@@ -24,7 +26,8 @@ class Cart
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Ometria\Core\Helper\Session $helperSession,
         \Ometria\Core\Helper\Ping $helperPing,
-        \Ometria\Core\Helper\Config $helperConfig
+        \Ometria\Core\Helper\Config $helperConfig,
+        ?CartToken $helperCartToken = null
     )
     {
         $this->frontendAreaChecker  = $frontendAreaChecker;
@@ -36,6 +39,13 @@ class Cart
         $this->helperPing           = $helperPing;
         $this->helperSession        = $helperSession;
         $this->helperConfig         = $helperConfig;
+
+        // Appended as optional and resolved lazily on purpose. Cart\BasketUpdated and
+        // Cart\OrderPlaced are constructor-less subclasses that inherit this signature, so a
+        // merchant deploying with a stale generated/ and no setup:di:compile would otherwise
+        // hit an ArgumentCountError on the ORDER PLACEMENT path.
+        $this->helperCartToken      = $helperCartToken
+            ?: \Magento\Framework\App\ObjectManager::getInstance()->get(CartToken::class);
     }
 
     public function basketUpdated(Observer $observer){
@@ -66,7 +76,18 @@ class Cart
             $cart = $cart->load($cart->getId());
         }
 
-        $cart_token = substr(hash('sha256', $cart->getCreatedAt().$cart->getId()),0,12);
+        // Per quote random token, generated once on first cart save and stored on the quote
+        // row. Must stay after the reload above: Quote::load() resets _data and would
+        // silently discard the setData() below.
+        $cart_token = $this->helperCartToken->getOrCreate($cart->getId());
+
+        if ($cart_token !== '') {
+            // Keep the in memory quote in step with the row we just wrote. AbstractDb
+            // includes any field where hasData() is true, so a quote loaded before our write
+            // still holds NULL here and a later $quote->save() in this request would write
+            // that NULL straight back over the token.
+            $cart->setData(CartToken::COLUMN, $cart_token);
+        }
 
         $command = array(
                 'basket',
