@@ -2,6 +2,7 @@
 
 namespace Ometria\Core\Model\Observer;
 use Magento\Framework\Event\Observer;
+use Ometria\Core\Helper\CartToken;
 
 class Cart
 {
@@ -14,6 +15,7 @@ class Cart
     protected $helperSession;
     protected $helperConfig;
     protected $productFactory;
+    protected $helperCartToken;
 
     public function __construct(
         \Ometria\Core\Helper\Product $helperProduct,
@@ -24,7 +26,8 @@ class Cart
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Ometria\Core\Helper\Session $helperSession,
         \Ometria\Core\Helper\Ping $helperPing,
-        \Ometria\Core\Helper\Config $helperConfig
+        \Ometria\Core\Helper\Config $helperConfig,
+        ?CartToken $helperCartToken = null
     )
     {
         $this->frontendAreaChecker  = $frontendAreaChecker;
@@ -36,6 +39,11 @@ class Cart
         $this->helperPing           = $helperPing;
         $this->helperSession        = $helperSession;
         $this->helperConfig         = $helperConfig;
+
+        // Optional and lazily resolved so subclasses that inherit this constructor keep
+        // working against a stale generated/ directory.
+        $this->helperCartToken      = $helperCartToken
+            ?: \Magento\Framework\App\ObjectManager::getInstance()->get(CartToken::class);
     }
 
     public function basketUpdated(Observer $observer){
@@ -66,7 +74,13 @@ class Cart
             $cart = $cart->load($cart->getId());
         }
 
-        $cart_token = substr(hash('sha256', $cart->getCreatedAt().$cart->getId()),0,12);
+        // Must stay after the reload above, which resets the model's data.
+        $cart_token = $this->helperCartToken->getOrCreate($cart->getId());
+
+        if ($cart_token !== '') {
+            // Keep the in memory quote in step with the row that was just written.
+            $cart->setData(CartToken::COLUMN, $cart_token);
+        }
 
         $command = array(
                 'basket',

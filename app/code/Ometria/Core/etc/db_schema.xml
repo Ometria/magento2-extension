@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <!--
+        Adds the Ometria abandoned cart deeplink token to Magento's quote table.
+
+        Declared in Ometria_Core, the module that writes the value.
+
+        resource="checkout" must match Magento's own declaration of this table in
+        Magento_Quote/etc/db_schema.xml, and keeps split database installs pointing at
+        the right connection.
+
+        No index and no uniqueness constraint: the column is only ever read for a quote
+        already located by entity_id, never used as a lookup key.
+    -->
+    <table name="quote" resource="checkout" comment="Sales Flat Quote">
+        <column xsi:type="varchar" name="ometria_cart_token" nullable="true" length="64"
+                comment="Ometria Cart Deeplink Token"/>
+    </table>
+</schema>

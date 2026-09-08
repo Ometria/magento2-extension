@@ -1,6 +1,8 @@
 <?php
 namespace Ometria\AbandonedCarts\Controller\Cartlink;
 
+use Ometria\Core\Helper\CartToken;
+
 class Index extends \Magento\Framework\App\Action\Action
 {
     const CART_LINK_QUOTE_INVALID     = 'Cart link is incorrect or expired';
@@ -16,6 +18,7 @@ class Index extends \Magento\Framework\App\Action\Action
     protected $cookieHelper;
     protected $visitor;
     protected $cart;
+    protected $cartTokenHelper;
 
 
     public function __construct(
@@ -27,7 +30,8 @@ class Index extends \Magento\Framework\App\Action\Action
         \Magento\Checkout\Model\Cart $cart,
         \Magento\Framework\Session\SessionManagerInterface $session,
         \Magento\Customer\Model\Visitor $visitor,
-        \Magento\Framework\Stdlib\CookieManagerInterface $cookieHelper
+        \Magento\Framework\Stdlib\CookieManagerInterface $cookieHelper,
+        ?CartToken $cartTokenHelper = null
     )
     {
         $this->visitor                          = $visitor;
@@ -40,6 +44,11 @@ class Index extends \Magento\Framework\App\Action\Action
         $this->checkoutSession                  = $checkoutSession;
         $this->cart                             = $cart;
         $this->cookieHelper                     = $cookieHelper;
+
+        // Optional and lazily resolved so this route keeps working against a stale
+        // generated/ directory.
+        $this->cartTokenHelper                  = $cartTokenHelper
+            ?: \Magento\Framework\App\ObjectManager::getInstance()->get(CartToken::class);
 
         return parent::__construct($context);
     }
@@ -56,8 +65,10 @@ class Index extends \Magento\Framework\App\Action\Action
                 )->setUrl('/');
         }
 
+        // Normalise both params before use; either may arrive as a non scalar.
         $token = $this->getRequest()->getParam('token');
-        $id = $this->getRequest()->getParam('id');
+        $token = is_string($token) ? $token : '';
+        $id    = (int)$this->getRequest()->getParam('id');
 
         $is_ok = false;
 
@@ -74,8 +85,8 @@ class Index extends \Magento\Framework\App\Action\Action
 
             if ($helper->shouldCheckDeeplinkgToken())
             {
-                $computed_token = substr(hash('sha256', $quote->getCreatedAt().$quote->getId()), 0, 12);
-                if ($token!=$computed_token)
+                // Compared against the token stored on the quote row.
+                if (!$this->cartTokenHelper->isValid($quote->getData(CartToken::COLUMN), $token))
                 {
                     $this->messageManager->addNotice(self::CART_LINK_TOKEN_INVALID);
                     return $this->resultFactory->create(
